@@ -131,16 +131,33 @@ Our Smart Hook integrates with Eigenlayer AVS to:
 - Set limit orders automatically when market prices exceed tolerance levels
 
 
-### Intefaces:
+### Examples:
 
-##### Lorem Isum
+##### User 1
+- Selects 3 RWA's via Multi Token Swap
+- Selects Auto-Limit Order at 0.5% Tolerance
+- Pool Price is below 0.5% Tolerance
+- Swap gets executed against the Pool
+- User receives his 3 RWA Tokens
 
-##### Lorem Isum
+##### User 2
+- Selects 3 RWA's via Multi Token Swap
+- Selects Auto-Limit Order at 0.5% Tolerance
+- Pool Price is above 0.5% Tolerance
+- Limit Order gets set at 0.5% above oracle price
+- Arbitrage Trader issue's RWA Tokens & fills the Limit Order position
+- User receives his 3 RWA Tokens
 
-##### Lorem Isum
+##### User 3
+- Selects 3 RWA's via Multi Token Swap
+- Selects DCA every 1 Minute
+- Selects Auto-Limit Order at 0.5% Tolerance
 
-### Example Usage:
-
+*Every Minute (on repeat)*
+- Pool Price is above 0.5% Tolerance
+- Limit Order gets set at 0.5% above oracle price
+- Arbitrage Trader issue's RWA Tokens & fills the Limit Order position
+- User receives his 3 RWA Tokens
 
 ## Development Setup
 
