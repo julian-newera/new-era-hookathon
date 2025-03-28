@@ -20,6 +20,7 @@ import {console} from "forge-std/console.sol";
 import {Position} from "v4-core/src/libraries/Position.sol";
 import {TestERC20} from "v4-core/src/test/TestERC20.sol";
 import {HookEnabledSwapRouter} from "../utils/HookEnabledSwapRouter.sol";
+import {ITWAMM} from "../src/interfaces/ITWAMM.sol";
 
 contract DynamicPricesAvsHookTest is Test, Deployers {
     using CurrencyLibrary for Currency;
@@ -37,7 +38,7 @@ contract DynamicPricesAvsHookTest is Test, Deployers {
     address constant TOKEN0 = address(0x10000);
     address constant TOKEN1 = address(0x20000);
     uint256 constant PRICE_1_1 = 1e18; // 1:1 price
-    // uint160 constant SQRT_PRICE_1_1 = 79228162514264337593543950336;
+    uint160 constant SQRT_PRICE_1 = 79228162514264337593543950336;
 
     function setUp() external {
         deployFreshManagerAndRouters();
@@ -76,12 +77,12 @@ contract DynamicPricesAvsHookTest is Test, Deployers {
         console.log(address(avsHook));
 
         // Initialize pool with tokens
-        (key, id) = initPoolAndAddLiquidity(
+        (key, id) = initPool(
             currency0,
             currency1,
             IHooks(address(avsHook)),
-            3000, // 0.3% fee
-            SQRT_PRICE_1_1
+            500, // 0.3% fee
+            SQRT_PRICE_1
         );
 
         console.log("Pool created");
@@ -96,9 +97,9 @@ contract DynamicPricesAvsHookTest is Test, Deployers {
         modifyLiquidityRouter = new PoolModifyLiquidityTest(manager);
 
         token0.approve(address(avsHook), type(uint256).max);
-        token1.approve(address(avsHook), type(uint256).max);
-        token0.approve(address(router), type(uint256).max);
-        token1.approve(address(router), type(uint256).max);
+        // token1.approve(address(avsHook), type(uint256).max);
+        // token0.approve(address(router), type(uint256).max);
+        // token1.approve(address(router), type(uint256).max);
     }
 
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
@@ -411,7 +412,7 @@ contract DynamicPricesAvsHookTest is Test, Deployers {
         // and we need exactly one tick (not a range) for the place function
         
         // Calculate valid tick for place: below current tick and multiple of tickSpacing
-        int24 tickLower = 0;         // For zero or negative ticks
+        int24 tickLower = 60;         // For zero or negative ticks
         
         console.log("Using tickLower:", tickLower);
         
@@ -420,7 +421,7 @@ contract DynamicPricesAvsHookTest is Test, Deployers {
         // require(tickLower < currentTick, "tickLower must be below current tick");
         
         bool zeroForOne = true;
-        uint128 liquidity = 1000000;
+        uint128 liquidity = 100;
         
         // Get token0 balance before
         uint256 token0BalanceBefore = token0.balanceOf(address(this));
@@ -533,5 +534,47 @@ contract DynamicPricesAvsHookTest is Test, Deployers {
             }
             fail();
         }
+    }
+
+    struct OrderKey {
+        address owner;
+        uint256 expiration;
+        bool zeroForOne;
+    }
+
+    struct Order {
+        uint256 sellRate;
+        uint256 earningsFactorLast;
+    }
+
+    function testTWAMM_submitOrder_storesOrderWithCorrectPoolAndOrderPoolInfo() public {
+        uint160 expiration = 30000;
+        uint160 submitTimestamp = 10000;
+        uint160 duration = expiration - submitTimestamp;
+
+        ITWAMM.OrderKey memory orderKey = ITWAMM.OrderKey(address(this), expiration, true);
+
+        ITWAMM.Order memory nullOrder = avsHook.getOrder(key, orderKey);
+        assertEq(nullOrder.sellRate, 0);
+        assertEq(nullOrder.earningsFactorLast, 0);
+
+        vm.warp(10000);
+        // token0.approve(address(twamm), 100 ether);
+        // snapStart("TWAMMSubmitOrder");
+        avsHook.submitOrder(key, orderKey, 1 ether);
+        // snapEnd();
+        console.log("Liquidity added successfully");
+
+        ITWAMM.Order memory submittedOrder = avsHook.getOrder(key, orderKey);
+        console.log("currentTick:", submittedOrder.sellRate);
+        (uint256 sellRateCurrent0For1, uint256 earningsFactorCurrent0For1) = avsHook.getOrderPool(key, true);
+        (uint256 sellRateCurrent1For0, uint256 earningsFactorCurrent1For0) = avsHook.getOrderPool(key, false);
+
+        assertEq(submittedOrder.sellRate, 1 ether / duration);
+        assertEq(submittedOrder.earningsFactorLast, 0);
+        assertEq(sellRateCurrent0For1, 1 ether / duration);
+        assertEq(sellRateCurrent1For0, 0);
+        assertEq(earningsFactorCurrent0For1, 0);
+        assertEq(earningsFactorCurrent1For0, 0);
     }
 }

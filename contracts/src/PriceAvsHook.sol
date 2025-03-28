@@ -705,6 +705,7 @@ contract DynamicPricesAvsHook is IAvsLogic, BaseHook, ITWAMM, IUnlockCallback {
         return self._advanceTimeThroughTickCrossing(poolKey, params, poolManager);
     }
 
+
     function _isCrossingInitializedTick(
         TWAMMHelper.PoolParamsOnExecute memory pool,
         PoolKey memory poolKey,
