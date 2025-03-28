@@ -25,9 +25,7 @@ import {console} from "forge-std/console.sol";
 
 // How to:
 // Either `source ../../.env` or replace variables in command.
-// forge script DynamicFeesAvsHookDeploy --rpc-url $L2_RPC --private-key $PRIVATE_KEY
-// --broadcast -vvvv --verify --etherscan-api-key $L2_ETHERSCAN_API_KEY --chain
-// $L2_CHAIN --verifier-url $L2_VERIFIER_URL --sig="run(address,address)" $ATTESTATION_CENTER_ADDRESS $POOL_MANAGER_ADDRESS
+// forge script script/PriceAvsHook.s.sol --via-ir --rpc-url https://base-sepolia.infura.io/v3/86d6db8b43814247b322f75d29ba345e --private-key 151ee9c063332f97069f4f2833c32878a3e35a77070869fae3c0c6050c055528 --broadcast -vvvv --verify --etherscan-api-key 86d6db8b43814247b322f75d29ba345e --chain 84532 --verifier-url https://base-sepolia.etherscan.io/ --sig="run(address,address,uint256)" 0x822BFc76e35C8bCcCeb5e10aC429F7EcE10D3416 0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408 1000
 contract DynamicPricesAvsHookDeploy is Script {
     function setUp() public {}
 
@@ -35,8 +33,14 @@ contract DynamicPricesAvsHookDeploy is Script {
         // https://book.getfoundry.sh/guides/deterministic-deployments-using-create2?highlight=CREATE2_DEPLOY#deterministic-deployments-using-create2
         address CREATE2_DEPLOYER = 0x4e59b44847b379578588920cA78FbF26c0B4956C;
 
-        uint160 flags = uint160(Hooks.AFTER_INITIALIZE_FLAG | Hooks.BEFORE_SWAP_FLAG);
-        bytes memory constructorArgs = abi.encode(attestationCenter, IPoolManager(poolManager));
+        uint160 flags = uint160(
+            Hooks.BEFORE_SWAP_FLAG | 
+            Hooks.AFTER_INITIALIZE_FLAG | 
+            Hooks.AFTER_SWAP_FLAG |
+            Hooks.BEFORE_INITIALIZE_FLAG |
+            Hooks.BEFORE_ADD_LIQUIDITY_FLAG 
+        );
+        bytes memory constructorArgs = abi.encode(address(attestationCenter), IPoolManager(address(poolManager)), _expirationInterval);
 
         (address hookAddress, bytes32 salt) =
             HookMiner.find(CREATE2_DEPLOYER, flags, type(DynamicPricesAvsHook).creationCode, constructorArgs);
@@ -45,7 +49,7 @@ contract DynamicPricesAvsHookDeploy is Script {
         console.log("Salt:", vm.toString(salt));
 
         vm.startBroadcast();
-        DynamicPricesAvsHook avsHook = new DynamicPricesAvsHook{salt: salt}(attestationCenter, IPoolManager(poolManager), _expirationInterval);
+        DynamicPricesAvsHook avsHook = new DynamicPricesAvsHook{salt: salt}(address(attestationCenter), IPoolManager(address(poolManager)), _expirationInterval);
 
         require(address(avsHook) == hookAddress, "Hook address mismatch");
 
@@ -53,3 +57,4 @@ contract DynamicPricesAvsHookDeploy is Script {
         vm.stopBroadcast();
     }
 }
+// forge script script/PriceAvsHook.s.sol --via-ir --rpc-url https://base-sepolia.infura.io/v3/86d6db8b43814247b322f75d29ba345e --private-key 151ee9c063332f97069f4f2833c32878a3e35a77070869fae3c0c6050c055528 --broadcast -vvvv --verify --etherscan-api-key 86d6db8b43814247b322f75d29ba345e --chain 84532 --verifier-url https://base-sepolia.etherscan.io/ --optimize --optimizer-runs 20 --sig="run(address,address,uint256)" 0x822BFc76e35C8bCcCeb5e10aC429F7EcE10D3416 0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408 1000

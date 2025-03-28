@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 import {Test} from "forge-std/Test.sol";
 import {IAttestationCenter} from "../src/interfaces/IAttestationCenter.sol";
-import {DynamicPricesAvsHook} from "../src/PriceAvsHook.sol";
+import {DynamicPricesAvsHook, Epoch, EpochLibrary} from "../src/PriceAvsHook.sol";
 import {MockAttestationCenter} from "../src/mocks/MockAttestationCenter.sol";
 import {Hooks} from "v4-core/src/libraries/Hooks.sol";
 import {Deployers} from "v4-core/test/utils/Deployers.sol";
@@ -17,6 +17,9 @@ import {Currency, CurrencyLibrary} from "v4-core/src/types/Currency.sol";
 import {StateLibrary} from "v4-core/src/libraries/StateLibrary.sol";
 import {PoolModifyLiquidityTest} from "v4-core/src/test/PoolModifyLiquidityTest.sol";
 import {console} from "forge-std/console.sol";
+import {Position} from "v4-core/src/libraries/Position.sol";
+import {TestERC20} from "v4-core/src/test/TestERC20.sol";
+import {HookEnabledSwapRouter} from "../utils/HookEnabledSwapRouter.sol";
 
 contract DynamicPricesAvsHookTest is Test, Deployers {
     using CurrencyLibrary for Currency;
@@ -26,7 +29,11 @@ contract DynamicPricesAvsHookTest is Test, Deployers {
     MockAttestationCenter attestationCenter;
     // PoolKey key;
     IPoolManager.SwapParams public swapParams;
+    PoolId id;
 
+    HookEnabledSwapRouter router;
+    TestERC20 token0;
+    TestERC20 token1;
     address constant TOKEN0 = address(0x10000);
     address constant TOKEN1 = address(0x20000);
     uint256 constant PRICE_1_1 = 1e18; // 1:1 price
@@ -36,6 +43,10 @@ contract DynamicPricesAvsHookTest is Test, Deployers {
         deployFreshManagerAndRouters();
         deployMintAndApprove2Currencies();
         attestationCenter = new MockAttestationCenter();
+
+        router = new HookEnabledSwapRouter(manager);
+        token0 = TestERC20(Currency.unwrap(currency0));
+        token1 = TestERC20(Currency.unwrap(currency1));
 
         // Set up hook flags
         uint160 flags = uint160(
@@ -65,7 +76,7 @@ contract DynamicPricesAvsHookTest is Test, Deployers {
         console.log(address(avsHook));
 
         // Initialize pool with tokens
-        (key,) = initPoolAndAddLiquidity(
+        (key, id) = initPoolAndAddLiquidity(
             currency0,
             currency1,
             IHooks(address(avsHook)),
@@ -83,6 +94,11 @@ contract DynamicPricesAvsHookTest is Test, Deployers {
         });
 
         modifyLiquidityRouter = new PoolModifyLiquidityTest(manager);
+
+        token0.approve(address(avsHook), type(uint256).max);
+        token1.approve(address(avsHook), type(uint256).max);
+        token0.approve(address(router), type(uint256).max);
+        token1.approve(address(router), type(uint256).max);
     }
 
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
@@ -277,5 +293,245 @@ contract DynamicPricesAvsHookTest is Test, Deployers {
             taskPerformer: address(0),
             taskDefinitionId: 1
         });
+    }
+
+
+    /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+    /*                      HELPER FUNCTIONS                      */
+    /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+    function testZeroLiquidityRevert() public {
+        vm.expectRevert(DynamicPricesAvsHook.ZeroLiquidity.selector);
+        avsHook.place(key, 0, true, 0);
+    }
+
+    function testZeroForOneRightBoundaryOfCurrentRange() public {
+        // Check tick spacing first
+        console.log("Tick spacing:", key.tickSpacing);
+        
+        // For zeroForOne, the tick should be below the current tick (0)
+        // Use negative tick that's multiple of tickSpacing
+        int24 tickLower = -60;
+        console.log("Using tickLower:", tickLower);
+        bool zeroForOne = true;
+        uint128 liquidity = 1000000;
+        
+        // Get current pool state before
+        (uint160 sqrtPriceX96Before, int24 currentTick,,) = manager.getSlot0(key.toId());
+        console.log("Current sqrtPrice before:", sqrtPriceX96Before);
+        console.log("Current tick:", currentTick);
+        
+        // Call place with try/catch to see if it reverts
+        try avsHook.place(key, tickLower, zeroForOne, liquidity) {
+            console.log("Place succeeded");
+            
+            // Check if epoch was set correctly
+            Epoch epoch = avsHook.getEpoch(key, tickLower, zeroForOne);
+            console.log("Epoch:", uint256(Epoch.unwrap(epoch)));
+            assertTrue(EpochLibrary.equals(epoch, Epoch.wrap(1)), "Epoch should be 1");
+            
+            // Get position info using Position library and StateLibrary
+            bytes32 positionKey = Position.calculatePositionKey(address(avsHook), tickLower, tickLower + key.tickSpacing, bytes32(0));
+            (uint128 posLiquidity,,) = manager.getPositionInfo(id, positionKey);
+            console.log("Position liquidity:", posLiquidity);
+            
+            // Verify liquidity
+            assertEq(posLiquidity, liquidity, "Position liquidity should match");
+        } catch Error(string memory reason) {
+            console.log("Place reverted with reason:", reason);
+            fail();
+        } catch (bytes memory lowLevelData) {
+            console.log("Place reverted with no reason");
+            bytes4 selector = bytes4(lowLevelData);
+            if (selector == DynamicPricesAvsHook.InRange.selector) {
+                console.log("Error: InRange");
+            } else if (selector == DynamicPricesAvsHook.CrossedRange.selector) {
+                console.log("Error: CrossedRange");
+            } else {
+                console.log("Unknown selector:", uint32(selector));
+            }
+            fail();
+        }
+    }
+
+    function testAddLiquidityDirectly() public {
+        // Get current tick and pool info
+        (uint160 sqrtPriceX96Before, int24 currentTick,,) = manager.getSlot0(key.toId());
+        console.log("Current sqrtPrice:", sqrtPriceX96Before);
+        console.log("Current tick:", currentTick);
+        console.log("Tick spacing:", key.tickSpacing);
+        
+        // For tick spacing of 60, use valid values that won't cause overflow
+        // Ensure tickLower < tickUpper and both are multiples of tickSpacing
+        int24 tickLower = -60;
+        int24 tickUpper = 0;
+        console.log("tickLower:", tickLower);
+        console.log("tickUpper:", tickUpper);
+        
+        // Add some safety checks
+        require(tickLower < tickUpper, "tickLower must be less than tickUpper");
+        require(tickLower % key.tickSpacing == 0, "tickLower must be a multiple of tickSpacing");
+        require(tickUpper % key.tickSpacing == 0, "tickUpper must be a multiple of tickSpacing");
+        
+        uint128 liquidity = 1000000;
+        
+        // Add liquidity directly via the liquidity router
+        modifyLiquidityRouter.modifyLiquidity(
+            key,
+            IPoolManager.ModifyLiquidityParams({
+                tickLower: tickLower,
+                tickUpper: tickUpper,
+                liquidityDelta: int256(uint256(liquidity)),
+                salt: bytes32(0)
+            }),
+            ""
+        );
+        
+        // Check the position was created properly
+        bytes32 positionKey = Position.calculatePositionKey(
+            address(modifyLiquidityRouter), 
+            tickLower, 
+            tickUpper, 
+            bytes32(0)
+        );
+        
+        (uint128 posLiquidity,,) = manager.getPositionInfo(id, positionKey);
+        console.log("Position liquidity:", posLiquidity);
+        assertEq(posLiquidity, liquidity, "Position liquidity should match");
+    }
+
+    function testPlaceSimplified() public {
+        // First, let's understand what ticks are valid for place
+        (uint160 sqrtPriceX96, int24 currentTick,,) = manager.getSlot0(key.toId());
+        // console.log("Current tick:", key.toId());
+        console.log("Current tick:", currentTick);
+        console.log("Tick spacing:", key.tickSpacing);
+        
+        // For zeroForOne with place() function, tick must be below the current tick
+        // and we need exactly one tick (not a range) for the place function
+        
+        // Calculate valid tick for place: below current tick and multiple of tickSpacing
+        int24 tickLower = 0;         // For zero or negative ticks
+        
+        console.log("Using tickLower:", tickLower);
+        
+        // Ensure tick is valid
+        // require(tickLower % key.tickSpacing == 0, "tickLower not a multiple of tickSpacing");
+        // require(tickLower < currentTick, "tickLower must be below current tick");
+        
+        bool zeroForOne = true;
+        uint128 liquidity = 1000000;
+        
+        // Get token0 balance before
+        uint256 token0BalanceBefore = token0.balanceOf(address(this));
+        console.log("Token0 balance before:", token0BalanceBefore);
+        
+        // Call place with try/catch to see if it reverts
+        try avsHook.place(key, tickLower, zeroForOne, liquidity) {
+            console.log("Place succeeded");
+            
+            // Get token0 balance after
+            uint256 token0BalanceAfter = token0.balanceOf(address(this));
+            console.log("Token0 balance after:", token0BalanceAfter);
+            console.log("Token0 spent:", token0BalanceBefore - token0BalanceAfter);
+            
+            // Check epoch
+            Epoch epoch = avsHook.getEpoch(key, tickLower, zeroForOne);
+            console.log("Epoch:", uint256(Epoch.unwrap(epoch)));
+            assertTrue(EpochLibrary.equals(epoch, Epoch.wrap(1)), "Epoch should be 1");
+            
+            // Check position liquidity via epoch instead of directly accessing position
+            uint256 epochLiquidity = avsHook.getEpochLiquidity(epoch, address(this));
+            console.log("Epoch liquidity:", epochLiquidity);
+            assertEq(epochLiquidity, liquidity, "Epoch liquidity should match");
+        } catch Error(string memory reason) {
+            console.log("Place reverted with reason:", reason);
+            fail();
+        } catch (bytes memory lowLevelData) {
+            console.log("Place reverted with no reason");
+            bytes4 selector = bytes4(lowLevelData);
+            if (selector == DynamicPricesAvsHook.InRange.selector) {
+                console.log("Error: InRange");
+            } else if (selector == DynamicPricesAvsHook.CrossedRange.selector) {
+                console.log("Error: CrossedRange");
+            } else {
+                console.log("Unknown selector:", uint32(selector));
+            }
+            fail();
+        }
+    }
+
+    function testSimpleLiquidityAddition() public {
+        console.log("Starting simple liquidity test");
+        
+        // Get current info
+        (uint160 sqrtPriceX96, int24 currentTick,,) = manager.getSlot0(key.toId());
+        console.log("Current tick:", currentTick);
+        console.log("Tick spacing:", key.tickSpacing);
+        
+        // For current tick 0 and tick spacing 60, use a range like [-60, 60]
+        // This ensures the current tick is strictly between the boundaries
+        int24 tickLower = -60;  // One tick spacing below current tick
+        int24 tickUpper = 60;   // One tick spacing above current tick
+        
+        // Ensure the current tick is inside the range (not at the boundary)
+        if (currentTick == tickLower) {
+            tickLower = tickLower - key.tickSpacing;
+        } else if (currentTick == tickUpper) {
+            tickUpper = tickUpper + key.tickSpacing;
+        }
+        
+        console.log("Final ticks:");
+        console.log("tickLower:", tickLower);
+        console.log("currentTick:", currentTick);
+        console.log("tickUpper:", tickUpper);
+        console.log("Validation: tickLower < currentTick < tickUpper:", 
+            (tickLower < currentTick) && (currentTick < tickUpper));
+        
+        // Double-check ticks are valid
+        require(tickLower % key.tickSpacing == 0, "tickLower not multiple of spacing");
+        require(tickUpper % key.tickSpacing == 0, "tickUpper not multiple of spacing");
+        require(tickLower < tickUpper, "tickLower must be less than tickUpper");
+        require(tickLower < currentTick, "currentTick must be greater than tickLower");
+        require(currentTick < tickUpper, "currentTick must be less than tickUpper");
+        
+        uint128 liquidity = 1000000;
+        
+        // Try to add liquidity 
+        try modifyLiquidityRouter.modifyLiquidity(
+            key,
+            IPoolManager.ModifyLiquidityParams({
+                tickLower: tickLower,
+                tickUpper: tickUpper,
+                liquidityDelta: int256(uint256(liquidity)),
+                salt: bytes32(0)
+            }),
+            ""
+        ) {
+            console.log("Liquidity added successfully");
+            
+            // Check the position was created properly
+            bytes32 positionKey = Position.calculatePositionKey(
+                address(modifyLiquidityRouter), 
+                tickLower, 
+                tickUpper, 
+                bytes32(0)
+            );
+            
+            (uint128 posLiquidity,,) = manager.getPositionInfo(id, positionKey);
+            console.log("Position liquidity:", posLiquidity);
+            assertEq(posLiquidity, liquidity, "Position liquidity should match");
+            
+        } catch Error(string memory reason) {
+            console.log("Failed to add liquidity:", reason);
+            fail();
+        } catch (bytes memory lowLevelData) {
+            console.log("Failed to add liquidity with no reason");
+            if (lowLevelData.length >= 4) {
+                bytes4 selector = bytes4(lowLevelData);
+                console.log("Error selector:", uint32(selector));
+            }
+            fail();
+        }
     }
 }

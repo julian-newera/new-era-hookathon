@@ -70,29 +70,24 @@ new-era-hookathon/
 │   │   └── lib/
 │   └── package.json
 │
-├── services/
-│   ├── Execution_Service/
-│   │   ├── config/
-│   │   ├── src/
-│   │   ├── Dockerfile
-│   │   ├── index.js
-│   │   └── package.json
-│   │
-│   └── Validation_Service/
-│       ├── config/
+│── Execution_Service/
+│   │── configs/
+│   │── src/
+│   │── Dockerfile
+│   │── index.js
+│   └── package.json
+│ 
+│── Validation_Service/
+│       ├── configs/
 │       ├── src/
 │       ├── Dockerfile
 │       ├── index.js
 │       └── package.json
 │
-├── infrastructure/
-│   ├── build/
-│   ├── grafana/
-│   ├── docker-compose.yml
-│   └── prometheus.yaml
-│
-├── LICENSE
-├── package.json
+├── build/
+│── grafana/
+│── docker-compose.yml
+│── prometheus.yaml
 └── README.md
 
 ```

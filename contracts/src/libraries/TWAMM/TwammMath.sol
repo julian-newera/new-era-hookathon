@@ -176,4 +176,34 @@ library TwammMath {
     function reciprocal(bytes16 n) private pure returns (bytes16) {
         return ONE.div(n);
     }
+
+    function getAmountOut(
+        uint128 liquidity,
+        uint160 sqrtPriceX96Start,
+        uint160 sqrtPriceX96End
+    ) internal pure returns (uint256 amountOut) {
+        // Calculate amount based on price difference and liquidity
+        if (sqrtPriceX96End < sqrtPriceX96Start) {
+            uint256 priceDiff = uint256(sqrtPriceX96Start) - uint256(sqrtPriceX96End);
+            amountOut = (liquidity * priceDiff) / (1 << 96);
+        } else {
+            uint256 priceDiff = uint256(sqrtPriceX96End) - uint256(sqrtPriceX96Start);
+            amountOut = (liquidity * priceDiff) / (1 << 96);
+        }
+    }
+    
+    function getAmountIn(
+        uint128 liquidity,
+        uint160 sqrtPriceX96Start,
+        uint160 sqrtPriceX96End
+    ) internal pure returns (uint256 amountIn) {
+        // Calculate amount based on price difference and liquidity
+        if (sqrtPriceX96End > sqrtPriceX96Start) {
+            uint256 priceDiff = uint256(sqrtPriceX96End) - uint256(sqrtPriceX96Start);
+            amountIn = (liquidity * priceDiff * sqrtPriceX96End) / (1 << 96) / sqrtPriceX96Start;
+        } else {
+            uint256 priceDiff = uint256(sqrtPriceX96Start) - uint256(sqrtPriceX96End);
+            amountIn = (liquidity * priceDiff * sqrtPriceX96Start) / (1 << 96) / sqrtPriceX96End;
+        }
+    }
 }

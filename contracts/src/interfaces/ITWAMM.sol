@@ -59,7 +59,7 @@ interface ITWAMM {
     /// @member zeroForOne Bool whether the order is zeroForOne
     struct OrderKey {
         address owner;
-        uint160 expiration;
+        uint256 expiration;
         bool zeroForOne;
     }
 
@@ -71,9 +71,9 @@ interface ITWAMM {
     /// @param sellRate The sell rate of tokens per second being sold in the order
     /// @param earningsFactorLast The current earningsFactor of the order pool
     event SubmitOrder(
-        PoolId indexed poolId,
+        PoolId poolId,
         address indexed owner,
-        uint160 expiration,
+        uint256 indexed expiration,
         bool zeroForOne,
         uint256 sellRate,
         uint256 earningsFactorLast
@@ -88,9 +88,9 @@ interface ITWAMM {
     /// @param earningsFactorLast The current earningsFactor of the order pool
     ///   (since updated orders will claim existing earnings)
     event UpdateOrder(
-        PoolId indexed poolId,
+        PoolId poolId,
         address indexed owner,
-        uint160 expiration,
+        uint256 indexed expiration,
         bool zeroForOne,
         uint256 sellRate,
         uint256 earningsFactorLast
@@ -105,7 +105,7 @@ interface ITWAMM {
     /// @param amountIn The amount of sell token to add to the order. Some precision on amountIn may be lost up to the
     /// magnitude of (orderKey.expiration - block.timestamp)
     /// @return orderId The bytes32 ID of the order
-    function submitOrder(PoolKey calldata key, OrderKey calldata orderKey, uint256 amountIn)
+    function submitOrder(PoolKey calldata key, OrderKey memory orderKey, uint256 amountIn)
         external
         returns (bytes32 orderId);
 
@@ -114,7 +114,7 @@ interface ITWAMM {
     /// @param orderKey The OrderKey for which to identify the order
     /// @param amountDelta The delta for the order sell amount. Negative to remove from order, positive to add, or
     ///    -1 to remove full amount from order.
-    function updateOrder(PoolKey calldata key, OrderKey calldata orderKey, int256 amountDelta)
+    function updateOrder(PoolKey memory key, OrderKey memory orderKey, int256 amountDelta)
         external
         returns (uint256 tokens0Owed, uint256 tokens1Owed);
 
@@ -133,4 +133,6 @@ interface ITWAMM {
     function executeTWAMMOrders(PoolKey memory key) external;
 
     function tokensOwed(Currency token, address owner) external returns (uint256);
+
+    function getOrder(PoolKey calldata key, OrderKey calldata orderKey) external view returns (Order memory);
 }

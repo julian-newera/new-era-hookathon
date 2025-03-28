@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.15;
 
+import {FixedPoint96} from "v4-core/src/libraries/FixedPoint96.sol";
+
 /// @title TWAMM OrderPool - Represents an OrderPool inside of a TWAMM
 library OrderPool {
     /// @notice Information related to a long term order pool.
@@ -30,5 +32,18 @@ library OrderPool {
         unchecked {
             self.earningsFactorCurrent += earningsFactor;
         }
+    }
+
+    function updateEarningsFactor(
+        State storage self,
+        uint256 secondsElapsedX96,
+        uint256 sellingRate,
+        uint256 earningsPerSecondX96
+    ) internal {
+        self.earningsFactorCurrent += (secondsElapsedX96 * earningsPerSecondX96) / sellingRate;
+    }
+    
+    function calculateEarningsPerSecondX96(uint256 amount, uint128 liquidity) internal pure returns (uint256) {
+        return (amount << FixedPoint96.RESOLUTION) / liquidity;
     }
 }
