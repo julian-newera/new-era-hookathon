@@ -169,4 +169,20 @@ cd new-era-hookathon/contracts
 forge install
 
 # Run all tests
-forge test -vvv
+forge test --via-ir
+```
+
+### Base Sepolia Environment
+- Hook Contract: 0x3E86F8DEa5b8E4A36b4B93d8eB2A87A71CeC38C0
+
+- Attestation Center:
+0x822BFc76e35C8bCcCeb5e10aC429F7EcE10D3416
+
+- USDC Contract: 0x60D7A23033f0e2Ebd4A509FF7a50d19AE3096007
+
+- USDY Contract: 0xD446Ae173db30E2965010527D720b2539b350662
+
+- PAXG Contract:
+0x020dD0882F9132824bc3e5d539136D9BaacdFEd3
+
+- bCSPX Contract: 0x6CCd3a7A28663D7997CdCA93796839683AB3dfD0
