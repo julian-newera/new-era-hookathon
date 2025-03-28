@@ -97,7 +97,7 @@ new-era-hookathon/
 
 ### Limit Order Contract Details
 
-Our implementation extends BaseHook and incorporates several key features:
+My implementation extends BaseHook and incorporates several key features:
 
 - **EpochLibrary**: Implements epoch-based order tracking and lifecycle management
 - **Hook Permissions**: Configured for `afterInitialize` and `afterSwap` operations
@@ -118,7 +118,7 @@ Provides configurable execution schedules via the UI.
 
 ### Oracle Integration
 
-Our Smart Hook integrates with Eigenlayer AVS to:
+My Smart Hook integrates with Eigenlayer AVS to:
 - Access reliable price oracle data for RWAs.
 - Compare on-chain liquidity pool prices with oracle prices.
 - Ensure trading occurs within acceptable tolerance levels of the underlying asset values.
