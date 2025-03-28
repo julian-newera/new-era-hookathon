@@ -5,7 +5,7 @@
 ## Links
 
 - **GitHub:** https://github.com/julian-newera/new-era-hookathon
-- **Presentation:** https://docsend.com/view/vrtj2tbaas54sbz5
+- **Presentation:** https://docsend.com/view/b2hau5g8t7u4r7d7
 
 ## Introduction
 
