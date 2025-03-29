@@ -35,11 +35,12 @@ NewEra Finance will offer RWAs across a wide range of categories, including Comm
 ![Architecture](Architecture-Diagram.png)
 
 ## Smart Hook Logic
-This approach ensures that users receive fair pricing, even in low liquidity markets, by:
-- Comparing the current market price against the oracle-provided actual price.
-- Setting a user-defined tolerance level for price deviation.
+This approach ensures that users receive automated execution, even in low liquidity markets by:
+- Comparing the current market price against the oracle-provided actual RWA issurance/redemption price.
+- Setting a user-defined tolerance level for premium.
 - Executing immediately when the price is within the tolerance range.
-- Creating a limit order at the maximum acceptable price when the current price exceeds the tolerance.
+- Creating a limit order at the maximum acceptable price when the current pool price exceeds the tolerance level.
+- Automate time-based investments via DCA functionality.
 
 
 ## Technical Implementation
@@ -95,34 +96,32 @@ new-era-hookathon/
 ```
 
 
-### Limit Order Contract Details
+### Limit Order Integration for Auto-Limit Order
 
 My implementation extends BaseHook and incorporates several key features:
 
 - **EpochLibrary**: Implements epoch-based order tracking and lifecycle management
 - **Hook Permissions**: Configured for `afterInitialize` and `afterSwap` operations
 - **Order Lifecycle Management**: 
-  - `place()`: Create new limit orders with specified parameters
+  - `place()`: Create new limit orders with Eigenlayer AVS RWA price + tolerance.
   - `kill()`: Cancel existing orders and return funds
   - `withdraw()`: Claim filled order proceeds
   - `_fillEpoch()`: Internal function to process orders when conditions are met
 
-### TWAMM Integration
+### TWAMM Integration for DCA
 
 The Time-Weighted Average Market Making (TWAMM) functionality:
 - Enables automated Dollar Cost Average (DCA) investment strategies.
-- Splits large orders into smaller portions executed over time.
-- Reduces price impact and slippage for users.
-Provides configurable execution schedules via the UI.
+- **TWAMM Order Lifecycle Management**:
+- `submitOrder()`: Creates a new TWAMM order with specified tokens, expiration time, and amount
+- `updateOrder()`: Modifies an existing TWAMM order's parameters
+- `executeTWAMMOrders()`: Processes all active TWAMM orders since last execution
+- `claimTokens()`: Allows users to claim proceeds from executed TWAMM orders
 
 
-### Oracle Integration
+### Eigenlayer AVS Integration
 
-My Smart Hook integrates with Eigenlayer AVS to:
-- Access reliable price oracle data for RWAs.
-- Compare on-chain liquidity pool prices with oracle prices.
-- Ensure trading occurs within acceptable tolerance levels of the underlying asset values.
-- Automatically set limit orders when market prices exceed tolerance levels.
+My Smart Hook integrates with Eigenlayer AVS to retrieve the RWA underlying asset price (issuance/redemption price) in a trustless environment.
 
 
 
@@ -172,6 +171,9 @@ forge test --via-ir
 ```
 
 ### Base Sepolia Environment
+
+At https://stage.newera.finance/#/swap select Base-Sepolia Network
+
 - NewEra Hook Contract: 0x3E86F8DEa5b8E4A36b4B93d8eB2A87A71CeC38C0
 
 - AVS Attestation Center:
