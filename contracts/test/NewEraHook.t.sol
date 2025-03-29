@@ -304,4 +304,6 @@ contract NewEraHookTest is Test, Deployers {
         assertEq(earningsFactorCurrent0For1, 0);
         assertEq(earningsFactorCurrent1For0, 0);
     }
+
+    
 }

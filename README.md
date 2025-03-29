@@ -145,10 +145,9 @@ My Smart Hook integrates with Eigenlayer AVS to:
 
 ##### User 3
 - Selects 3 RWAs via Multi-Token Swap.
-- Sets DCA every 1 minute.
+- Sets DCA expiry period of 5 minute.
+- Split total Order Amount down into equal parts for sequential TWAMM execution over the 5-minute period.
 - Sets Auto-Limit Order at 0.5% tolerance.
-
-*Every Minute (on repeat)*
 - The pool price is above 0.5% tolerance.
 - Limit order is set at 0.5% above the oracle price.
 - An arbitrage trader issues RWA tokens and fills the limit order position.
@@ -173,16 +172,23 @@ forge test --via-ir
 ```
 
 ### Base Sepolia Environment
-- Hook Contract: 0x3E86F8DEa5b8E4A36b4B93d8eB2A87A71CeC38C0
+- NewEra Hook Contract: 0x3E86F8DEa5b8E4A36b4B93d8eB2A87A71CeC38C0
 
-- Attestation Center:
+- AVS Attestation Center:
 0x822BFc76e35C8bCcCeb5e10aC429F7EcE10D3416
 
-- USDC Contract: 0x60D7A23033f0e2Ebd4A509FF7a50d19AE3096007
+- USDC ERC20 Contract: 0x60D7A23033f0e2Ebd4A509FF7a50d19AE3096007
 
-- USDY Contract: 0xD446Ae173db30E2965010527D720b2539b350662
+- USDY ER20 Contract: 0xD446Ae173db30E2965010527D720b2539b350662
 
-- PAXG Contract:
+- PAXG ER20 Contract:
 0x020dD0882F9132824bc3e5d539136D9BaacdFEd3
 
-- bCSPX Contract: 0x6CCd3a7A28663D7997CdCA93796839683AB3dfD0
+- bCSPX ER20 Contract: 0x6CCd3a7A28663D7997CdCA93796839683AB3dfD0
+
+- DCA Transaction Proof:
+[0x3c7c97cf66cf8437f84d4c707a0e2cdc9346853ccd0e519441aa5fd629b13bca](https://sepolia.basescan.org/tx/0x3c7c97cf66cf8437f84d4c707a0e2cdc9346853ccd0e519441aa5fd629b13bca)
+
+- Limit Order Transaction Proof:
+[0xa2319ee4bc606d915821509f9c9066aec811b3766ce5f0a279fc0aa3bced4b2b](https://sepolia.basescan.org/tx/0xa2319ee4bc606d915821509f9c9066aec811b3766ce5f0a279fc0aa3bced4b2b)
+
