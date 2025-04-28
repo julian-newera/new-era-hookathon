@@ -370,14 +370,19 @@ contract NewEraHook is IAvsLogic, BaseHook, ITWAMM, IUnlockCallback {
     }
 
     function unlockCallback(bytes calldata rawData) external virtual returns (bytes memory) {
-        (UnlockType opType) = abi.decode(rawData[:32], (UnlockType));
-        if (opType == UnlockType.Place) {
-            (UnlockType opType,
-            PoolKey memory key,
-            int24 tickLower,
-            bool zeroForOne,
-            int256 liquidityDelta,
-            address owner) = abi.decode(rawData, (UnlockType, PoolKey, int24, bool, int256, address));
+        /**
+         * @dev Decode the operation type from the first 32 bytes
+         * Using initialOpType to avoid variable shadowing
+         */
+        (UnlockType initialOpType) = abi.decode(rawData[:32], (UnlockType));
+        if (initialOpType == UnlockType.Place) {
+            /**
+             * @dev Decode the full data for Place operation
+             * Each variable in the tuple needs both type and name
+             * PoolKey needs memory keyword as it's a struct
+             */
+            (UnlockType opType, PoolKey memory key, int24 tickLower, bool zeroForOne, int256 liquidityDelta, address owner) = 
+                abi.decode(rawData, (UnlockType, PoolKey, int24, bool, int256, address));
             (BalanceDelta delta,) = poolManager.modifyLiquidity(
                 key,
                 IPoolManager.ModifyLiquidityParams({
@@ -401,9 +406,14 @@ contract NewEraHook is IAvsLogic, BaseHook, ITWAMM, IUnlockCallback {
 
             return new bytes(0);
         }
-        if (opType == UnlockType.Other) {
+        if (initialOpType == UnlockType.Other) {
+            /**
+             * @dev Decode the full data for Other operation
+             * Each variable in the tuple needs both type and name
+             * Both PoolKey and IPoolManager.SwapParams need memory keyword as they are structs
+             */
             (UnlockType opType, PoolKey memory key, IPoolManager.SwapParams memory swapParams) =
-            abi.decode(rawData, (UnlockType, PoolKey, IPoolManager.SwapParams));
+                abi.decode(rawData, (UnlockType, PoolKey, IPoolManager.SwapParams));
 
             BalanceDelta delta = poolManager.swap(key, swapParams, ZERO_BYTES);
 
@@ -548,10 +558,7 @@ contract NewEraHook is IAvsLogic, BaseHook, ITWAMM, IUnlockCallback {
         unchecked {
             uint256 duration = orderKey.expiration - block.timestamp;
             sellRate = amountIn / duration;
-            /**
-             * @dev Generate order ID using TWAMMHelper's method
-             * This ensures consistent order ID generation across the system
-             */
+            
             orderId = _submitOrder(twamm, orderKey, sellRate);
             
             /**
@@ -607,14 +614,7 @@ contract NewEraHook is IAvsLogic, BaseHook, ITWAMM, IUnlockCallback {
 
         executeTWAMMOrders(key);
 
-        /**
-         * @dev Generate order ID and verify order existence
-         * The order ID is generated using TWAMMHelper's method for consistency
-         * We check if the order is active in our tracking system
-         */
-        bytes32 orderId = TWAMMHelper._orderId(orderKey);
-        if (!activeOrders[orderKey.owner][orderId]) revert OrderDoesNotExist(orderKey);
-
+        
         (uint256 buyTokensOwed, uint256 sellTokensOwed, uint256 newSellrate, uint256 newEarningsFactorLast) =
             _updateOrder(twamm, orderKey, amountDelta);
 
@@ -644,8 +644,8 @@ contract NewEraHook is IAvsLogic, BaseHook, ITWAMM, IUnlockCallback {
         returns (uint256 buyTokensOwed, uint256 sellTokensOwed, uint256 newSellRate, uint256 earningsFactorLast)
     {
         /**
-         * @dev Get the order from storage using TWAMMHelper's method
-         * This retrieves the actual order data for modification
+         * @dev Get the order using TWAMMHelper's method
+         * This ensures we're working with the correct order and maintains consistency
          */
         Order storage order = TWAMMHelper._getOrder(self, orderKey);
         OrderPool.State storage orderPool = orderKey.zeroForOne ? self.orderPool0For1 : self.orderPool1For0;
@@ -663,11 +663,11 @@ contract NewEraHook is IAvsLogic, BaseHook, ITWAMM, IUnlockCallback {
 
             if (orderKey.expiration <= block.timestamp) {
                 /**
-                 * @dev Order is completed - remove from storage and mark as inactive
-                 * This allows the user to create new orders for the same token pair
+                 * @dev Order has expired - remove it from storage and mark as inactive
+                 * This frees up the order slot for new orders
                  */
-                delete self.orders[orderId];
-                activeOrders[orderKey.owner][orderId] = false;
+                delete self.orders[TWAMMHelper._orderId(orderKey)];
+                activeOrders[orderKey.owner][TWAMMHelper._orderId(orderKey)] = false;
             } else {
                 order.earningsFactorLast = earningsFactorLast;
             }
@@ -693,11 +693,11 @@ contract NewEraHook is IAvsLogic, BaseHook, ITWAMM, IUnlockCallback {
                 }
                 if (newSellRate == 0) {
                     /**
-                     * @dev Order is completed - remove from storage and mark as inactive
+                     * @dev Order has been reduced to zero - remove it from storage and mark as inactive
                      * This allows the user to create new orders for the same token pair
                      */
-                    delete self.orders[orderId];
-                    activeOrders[orderKey.owner][orderId] = false;
+                    delete self.orders[TWAMMHelper._orderId(orderKey)];
+                    activeOrders[orderKey.owner][TWAMMHelper._orderId(orderKey)] = false;
                 } else {
                     order.sellRate = newSellRate;
                 }
