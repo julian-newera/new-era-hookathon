@@ -762,9 +762,11 @@ contract NewEraHook is IAvsLogic, BaseHook, ITWAMM, IUnlockCallback {
         return TWAMMHelper._isCrossingInitializedTick(pool, poolKey, nextSqrtPriceX96, poolManager);
     }
 
-    function _getOrder(TWAMMHelper.State storage self, OrderKey memory key) internal view returns (Order storage) {
-        return self.orders[TWAMMHelper._orderId(key)];
-    }
+    // This creates a new encoded order not get an existing one.
+
+    // function _getOrder(TWAMMHelper.State storage self, OrderKey memory key) internal view returns (Order storage) {
+    //     return self.orders[TWAMMHelper._orderId(key)];
+    // }
 
     function _hasOutstandingOrders(TWAMMHelper.State storage self) internal view returns (bool) {
         return TWAMMHelper._hasOutstandingOrders(self);
