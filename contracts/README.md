@@ -51,6 +51,28 @@ $ anvil
 $ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
 ```
 
+### Deploy PriceOracle
+
+To deploy the PriceOracle contract to Sepolia:
+
+```shell
+$ forge script script/PriceOracle.s.sol --rpc-url <your_rpc_url> --broadcast --verify -vvvv --private-key <your_private_key> --via-ir
+```
+
+Replace `<your_rpc_url>` with your Infura or other RPC provider URL and `<your_private_key>` with your wallet's private key.
+
+Deployed PriceOracle Contract Address (Sepolia):
+```
+0xa45b494b08da460B011A379933f476Cb4566e01e
+```
+
+View on Etherscan: [PriceOracle Contract](https://sepolia.etherscan.io/address/0xa45b494b08da460b011a379933f476cb4566e01e#readContract)
+
+To verify the contract on Sepolia:
+```shell
+$ forge verify-contract 0xa45b494b08da460B011A379933f476Cb4566e01e src/PriceOracle.sol:PriceOracle --chain-id 11155111 --watch --etherscan-api-key <your_etherscan_api_key>
+```
+
 ### Cast
 
 ```shell
