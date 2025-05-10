@@ -16,7 +16,6 @@ $$    $$/   $$  $$/ $$ |  $$ |$$       |$$ |  $$ |  $$  $$/ $$ |$$       |
  * @notice Terms of Service: https://www.othentic.xyz/terms-of-service
  */
 import {Script, console} from "forge-std/Script.sol";
-import {IAttestationCenter} from "../src/interfaces/IAttestationCenter.sol";
 import {NewEraHook} from "../src/NewEraHook.sol";
 import {IPoolManager} from "v4-core/src/interfaces/IPoolManager.sol";
 import {Hooks} from "v4-core/src/libraries/Hooks.sol";
@@ -49,11 +48,11 @@ contract NewEraHookDeploy is Script {
         console.log("Salt:", vm.toString(salt));
 
         vm.startBroadcast();
-        NewEraHook avsHook = new NewEraHook{salt: salt}(address(attestationCenter), IPoolManager(address(poolManager)), _expirationInterval);
+        // NewEraHook avsHook = new NewEraHook{salt: salt}(address(attestationCenter), IPoolManager(address(poolManager)), _expirationInterval);
 
-        require(address(avsHook) == hookAddress, "Hook address mismatch");
+        // require(address(avsHook) == hookAddress, "Hook address mismatch");
 
-        IAttestationCenter(attestationCenter).setAvsLogic(address(avsHook));
+        // IAttestationCenter(attestationCenter).setAvsLogic(address(avsHook));
         vm.stopBroadcast();
     }
 }

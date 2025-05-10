@@ -65,10 +65,10 @@ contract Deployers is Test {
     PoolNestedActionsTest nestedActionRouter;
     address feeController;
 
-    PoolKey key;
     PoolKey nativeKey;
     PoolKey uninitializedKey;
     PoolKey uninitializedNativeKey;
+    PoolKey key;
 
     // Update this value when you add a new hook flag.
     uint160 hookPermissionCount = 14;
