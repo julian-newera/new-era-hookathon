@@ -1,25 +1,20 @@
-// SPDX-License-Identifier: BUSL-1.1
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {IAttestationCenter} from "../interfaces/IAttestationCenter.sol";
-import {IAvsLogic} from "../interfaces/IAvsLogic.sol";
+contract MockAttestationCenter {
+    address public avsLogic;
+    mapping(address => mapping(address => uint256)) public prices;
 
-contract MockAttestationCenter is IAttestationCenter {
-   address public avsLogic;
-    
     function setAvsLogic(address _avsLogic) external {
         avsLogic = _avsLogic;
     }
 
-    function submitPriceUpdate(address base, address quote, uint256 price) external {
-        IAttestationCenter.TaskInfo memory task = IAttestationCenter.TaskInfo({
-            proofOfTask: "",
-            data: abi.encode(base, quote, price),
-            taskPerformer: msg.sender,
-            taskDefinitionId: 1
-        });
-        
-        // Call afterTaskSubmission on AVS logic
-        IAvsLogic(avsLogic).afterTaskSubmission(task, true, "", [uint256(0), uint256(0)], new uint256[](0));
+    function submitPriceUpdate(address token0, address token1, uint256 price) external {
+        prices[token0][token1] = price;
+        prices[token1][token0] = 1e36 / price; // Inverse price
     }
-}
+
+    function getPrice(address token0, address token1) external view returns (uint256) {
+        return prices[token0][token1];
+    }
+} 
