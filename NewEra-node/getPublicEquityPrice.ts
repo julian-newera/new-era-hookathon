@@ -1,4 +1,10 @@
 import { fetchAssets, fetchAssetsClass } from './explorerPrice';
+import { ethers } from 'ethers';
+
+import path from 'path';
+
+// Load environment variables from .env file in the same directory
+require("dotenv").config({ path: path.join(__dirname, '.env') });
 
 // Define types for better type safety
 interface PublicEquityData {
@@ -56,10 +62,57 @@ async function getPublicEquityInfo(): Promise<PublicEquityData[]> {
     }
 }
 
+
+async function updatePriceOracle(publicEquityData: PublicEquityData[]) {
+    if (!process.env.PRICE_ORACLE_ADDRESS) {
+        throw new Error('PRICE_ORACLE_ADDRESS environment variable is not set');
+    }
+    const oracleContract = process.env.PRICE_ORACLE_ADDRESS;
+    try {
+        // Connect to Sepolia network
+        if (!process.env.SEPOLIA_RPC) {
+            throw new Error('SEPOLIA_RPC environment variable is not set');
+        }
+        
+        const provider = new ethers.JsonRpcProvider(process.env.SEPOLIA_RPC);
+        
+        // Get the signer
+        const privateKey = process.env.PRIVATE_KEY;
+        if (!privateKey) {
+            throw new Error('PRIVATE_KEY environment variable is not set');
+        }
+        const signer = new ethers.Wallet(privateKey, provider);
+
+        const priceOracle = new ethers.Contract(oracleContract, [
+            "function updatePrices(string[] memory assets, uint256[] memory newPrices) external"
+        ], signer);
+
+        // Prepare arrays for batch update
+        const names = publicEquityData.map(data => data.name);
+        const prices = publicEquityData.map(data => BigInt(Math.floor(data.netAssetValue)));
+
+        // Log the data being sent
+        console.log('Sending to contract:');
+        console.log('Asset names:', names);
+        console.log('Prices:', prices.map(p => p.toString()));
+
+        // Call updatePrices function with all data at once
+        const tx = await priceOracle.updatePrices(names, prices);
+
+        console.log(`Transaction hash: ${tx.hash}`);
+        await tx.wait();
+        console.log('All prices updated successfully!');
+    } catch (error) {
+        console.error('Error updating price oracle:', error);
+        throw error;
+    }
+}
+
 // Example usage
 async function main() {
     try {
-        await getPublicEquityInfo();
+        const publicEquityData = await getPublicEquityInfo();
+        await updatePriceOracle(publicEquityData);
     } catch (error) {
         console.error('Failed to process public equity data:', error);
     }
