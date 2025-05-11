@@ -49,11 +49,11 @@ async function getPublicEquityInfo(): Promise<PublicEquityData[]> {
         }));
 
         // Log each asset's data
-        equityData.forEach(asset => {
-            console.log(`Asset: ${asset.name}`);
-            console.log(`Net Asset Value: $${asset.netAssetValue}`);
-            console.log('---');
-        });
+        // equityData.forEach(asset => {
+        //     console.log(`Asset: ${asset.name}`);
+        //     console.log(`Net Asset Value: $${asset.netAssetValue}`);
+        //     console.log('---');
+        // });
 
         return equityData;
     } catch (error) {

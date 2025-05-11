@@ -96,9 +96,9 @@ async function updatePriceOracle(commodityData: CommodityData) {
         const priceBigInt = BigInt(Math.floor(commodityData.price));
 
         // Log the data being sent
-        console.log('Sending to contract:');
-        console.log('Asset name:', commodityData.name);
-        console.log('Price:', priceBigInt.toString());
+        // console.log('Sending to contract:');
+        // console.log('Asset name:', commodityData.name);
+        // console.log('Price:', priceBigInt.toString());
 
         // Call updatePrices function
         const tx = await priceOracle.updatePrices(
