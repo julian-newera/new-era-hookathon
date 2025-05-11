@@ -129,7 +129,7 @@ async function main() {
 // Execute if this file is run directly
 if (require.main === module) {
     // Schedule to run every 20 minutes
-    cron.schedule('*/5 * * * *', async () => {
+    cron.schedule('*/20 * * * *', async () => {
         console.log('Running scheduled price update...');
         try {
             await main();
