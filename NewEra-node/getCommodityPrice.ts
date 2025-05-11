@@ -1,4 +1,11 @@
 import { fetchAssets, fetchAssetsClass } from './explorerPrice';
+import { ethers } from 'ethers';
+
+import path from 'path';
+
+
+// Load environment variables from .env file in the same directory
+require("dotenv").config({ path: path.join(__dirname, '.env') });
 
 // Define types for better type safety
 interface CommodityData {
@@ -15,8 +22,6 @@ interface AssetClassResponse {
     isSuccess: boolean;
     assetClasses: AssetClass[];
 }
-
-
 
 
 async function getCommodityInfo(): Promise<CommodityData> {
@@ -62,10 +67,59 @@ async function getCommodityInfo(): Promise<CommodityData> {
     }
 }
 
+async function updatePriceOracle(commodityData: CommodityData) {
+    if (!process.env.PRICE_ORACLE_ADDRESS) {
+        throw new Error('PRICE_ORACLE_ADDRESS environment variable is not set');
+    }
+    const oracleContract = process.env.PRICE_ORACLE_ADDRESS;
+    try {
+        // Connect to Sepolia network
+        if (!process.env.SEPOLIA_RPC) {
+            throw new Error('SEPOLIA_RPC environment variable is not set');
+        }
+        
+        const provider = new ethers.JsonRpcProvider(process.env.SEPOLIA_RPC);
+        
+        // Get the signer (you'll need to set up your private key in environment variables)
+        const privateKey = process.env.PRIVATE_KEY;
+        if (!privateKey) {
+            throw new Error('PRIVATE_KEY environment variable is not set');
+        }
+        const signer = new ethers.Wallet(privateKey, provider);
+       
+
+        const priceOracle = new ethers.Contract(oracleContract, [
+            "function updatePrices(string[] memory assets, uint256[] memory newPrices) external"
+        ], signer);
+
+        // Convert price to BigInt to handle large numbers
+        const priceBigInt = BigInt(Math.floor(commodityData.price));
+
+        // Log the data being sent
+        console.log('Sending to contract:');
+        console.log('Asset name:', commodityData.name);
+        console.log('Price:', priceBigInt.toString());
+
+        // Call updatePrices function
+        const tx = await priceOracle.updatePrices(
+            [commodityData.name],
+            [priceBigInt]
+        );
+
+        console.log(`Transaction hash: ${tx.hash}`);
+        await tx.wait();
+        console.log('Price updated successfully!');
+    } catch (error) {
+        console.error('Error updating price oracle:', error);
+        throw error;
+    }
+}
+
 // Example usage
 async function main() {
     try {
-        await getCommodityInfo();
+        const commodityData = await getCommodityInfo();
+        await updatePriceOracle(commodityData);
     } catch (error) {
         console.error('Failed to process commodity data:', error);
     }
@@ -78,5 +132,6 @@ if (require.main === module) {
 
 export {
     getCommodityInfo,
+    updatePriceOracle,
     type CommodityData
 }; 
