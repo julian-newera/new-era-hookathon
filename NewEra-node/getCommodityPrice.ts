@@ -1,5 +1,6 @@
 import { fetchAssets, fetchAssetsClass } from './explorerPrice';
 import { ethers } from 'ethers';
+import cron from "node-cron";
 
 import path from 'path';
 
@@ -127,7 +128,17 @@ async function main() {
 
 // Execute if this file is run directly
 if (require.main === module) {
-    main();
+    // Schedule to run every 20 minutes
+    cron.schedule('*/20 * * * *', async () => {
+        console.log('Running scheduled price update...');
+        try {
+            await main();
+        } catch (error) {
+            console.error('Scheduled update failed:', error);
+        }
+    });
+
+    console.log('Price update service started. Will run every 20 minutes.');
 }
 
 export {
