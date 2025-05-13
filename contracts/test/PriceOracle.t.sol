@@ -28,7 +28,7 @@ contract PriceOracleTest is Test {
     }
 
     /// @notice Tests that the constructor correctly sets the owner
-    function test_Constructor() public {
+    function test_Constructor() public view {
         assertEq(priceOracle.owner(), owner);
     }
 
