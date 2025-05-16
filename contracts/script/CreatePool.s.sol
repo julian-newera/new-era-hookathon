@@ -10,7 +10,7 @@ import {IHooks} from "v4-core/src/interfaces/IHooks.sol";
 contract CreatePoolScript is Script {
     function run() external {
         // Replace these with your actual values:
-        // uint256 deployerPrivateKey = 0x151ee9c063332f97069f4f2833c32878a3e35a77070869fae3c0c6050c055528;
+        uint256 deployerPrivateKey = 0x151ee9c063332f97069f4f2833c32878a3e35a77070869fae3c0c6050c055528;
         address poolManagerAddress = 0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408;   // Uniswap v4 Pool Manager on Base Sepolia
         address usdc = 0x60D7A23033f0e2Ebd4A509FF7a50d19AE3096007;                       // USDC token address on Base Sepolia
         address usdy = 0xdd47689da802262Eaf822a94982d929c4afA16ce;                       // USDY token address on Base Sepolia
@@ -39,7 +39,7 @@ contract CreatePoolScript is Script {
         });
 
         // If your hook requires additional data, encode it here; otherwise use an empty bytes string.
-        bytes memory hookData = "";
+        // bytes memory hookData = "";
 
         // Broadcast the transaction using your hardcoded private key.
         vm.startBroadcast(deployerPrivateKey);

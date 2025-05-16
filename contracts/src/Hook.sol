@@ -13,6 +13,8 @@ import {TickMath} from "v4-core/src/libraries/TickMath.sol";
 import {IPriceOracle} from "./interfaces/IPriceOracle.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IExtsload} from "v4-core/src/interfaces/IExtsload.sol";
+import "forge-std/console.sol";
+import {TWAMMHelper} from "./libraries/TWAMMHelper.sol";
 
 contract NewEraHook is BaseHook {
     using PoolIdLibrary for PoolKey;
@@ -32,16 +34,13 @@ contract NewEraHook is BaseHook {
         uint256 amount,
         uint256 executionPrice
     );
-    event LimitOrderCancelled(
-        PoolId poolId,
-        address user,
-        uint256 amount
-    );
+    event LimitOrderCancelled(PoolId poolId, address user, uint256 amount);
 
     // Structs
     struct LimitOrder {
         address user;
         uint256 amount;
+        uint256 totalAmount; // Store total amount including fees
         uint256 oraclePrice;
         uint256 tolerance;
         bool zeroForOne;
@@ -52,6 +51,8 @@ contract NewEraHook is BaseHook {
     // Storage
     mapping(PoolId => mapping(address => LimitOrder)) public limitOrders;
     IPriceOracle public immutable priceOracle;
+    mapping(PoolId => TWAMMHelper.State) internal twammStates;
+    mapping(PoolId => address) public poolAddresses;
 
     // Errors
     error InvalidTolerance();
@@ -67,23 +68,47 @@ contract NewEraHook is BaseHook {
         priceOracle = IPriceOracle(_priceOracle);
     }
 
-    function getHookPermissions() public pure override returns (Hooks.Permissions memory) {
-        return Hooks.Permissions({
-            beforeInitialize: false,
-            afterInitialize: false,
-            beforeAddLiquidity: false,
-            afterAddLiquidity: false,
-            beforeRemoveLiquidity: false,
-            afterRemoveLiquidity: false,
-            beforeSwap: true,
-            afterSwap: false,
-            beforeDonate: false,
-            afterDonate: false,
-            beforeSwapReturnDelta: false,
-            afterSwapReturnDelta: false,
-            afterAddLiquidityReturnDelta: false,
-            afterRemoveLiquidityReturnDelta: false
-        });
+    function getHookPermissions()
+        public
+        pure
+        override
+        returns (Hooks.Permissions memory)
+    {
+        return
+            Hooks.Permissions({
+                beforeInitialize: true,
+                afterInitialize: false,
+                beforeAddLiquidity: false,
+                afterAddLiquidity: false,
+                beforeRemoveLiquidity: false,
+                afterRemoveLiquidity: false,
+                beforeSwap: true,
+                afterSwap: false,
+                beforeDonate: false,
+                afterDonate: false,
+                beforeSwapReturnDelta: false,
+                afterSwapReturnDelta: false,
+                afterAddLiquidityReturnDelta: false,
+                afterRemoveLiquidityReturnDelta: false
+            });
+    }
+
+    function _beforeInitialize(
+        address,
+        PoolKey calldata key,
+        uint160
+    ) internal virtual override returns (bytes4) {
+        // Initialize TWAMM state for this pool
+        PoolId poolId = key.toId();
+        TWAMMHelper.State storage twamm = twammStates[poolId];
+        twamm.lastVirtualOrderTimestamp = block.timestamp;
+
+        // Store pool address
+        poolAddresses[poolId] = address(
+            uint160(uint256(keccak256(abi.encode(poolId))))
+        );
+
+        return BaseHook.beforeInitialize.selector;
     }
 
     function _beforeSwap(
@@ -92,56 +117,143 @@ contract NewEraHook is BaseHook {
         IPoolManager.SwapParams calldata params,
         bytes calldata hookData
     ) internal override returns (bytes4, BeforeSwapDelta, uint24) {
-        // Prevent recursive calls
+        console.log("_beforeSwap called with sender:", sender);
+
         if (sender == address(this)) {
+            console.log("Sender is hook contract, skipping");
             return (
-                BaseHook.beforeSwap.selector,
+                this.beforeSwap.selector,
                 BeforeSwapDeltaLibrary.ZERO_DELTA,
                 0
             );
         }
 
-        // Decode tolerance from hookData
-        uint256 tolerance = abi.decode(hookData, (uint256));
+        // Decode the order owner's address from hookData
+        address orderOwner = abi.decode(hookData, (address));
+        console.log("Order owner from hookData:", orderOwner);
 
-        // Get current pool price
-        address poolAddress = address(uint160(uint256(keccak256(abi.encode(key.toId())))));
-        bytes32 slot0 = IExtsload(poolAddress).extsload(bytes32(uint256(0)));
-        int24 currentTick = int24(uint24(uint256(slot0)));
-        uint160 currentPrice = TickMath.getSqrtPriceAtTick(currentTick);
+        PoolId poolId = key.toId();
+
+        // Check for orders under the order owner's address
+        LimitOrder storage order = limitOrders[poolId][orderOwner];
+        if (!order.isActive) {
+            console.log("No active order found for order owner");
+            return (
+                this.beforeSwap.selector,
+                BeforeSwapDeltaLibrary.ZERO_DELTA,
+                0
+            );
+        }
+
+        console.log("Found active order for order owner");
+
+        // Get current price from swap parameters
+        uint160 sqrtPriceX96 = params.sqrtPriceLimitX96;
+        uint256 currentPrice = (uint256(sqrtPriceX96) *
+            uint256(sqrtPriceX96) *
+            1e18) >> 192;
+
+        // Scale oracle price to match pool price scale (1e18)
+        uint256 scaledOraclePrice = (order.oraclePrice * 1e18) / 100; // Convert from 100 to 1.00
+        uint256 scaledTolerance = (order.tolerance * 1e18) / 10000; // Convert basis points to percentage
+
+        // Calculate price limit based on oracle price and tolerance
+        uint256 priceLimit = order.zeroForOne
+            ? scaledOraclePrice - scaledTolerance // For sell orders
+            : scaledOraclePrice + scaledTolerance; // For buy orders
+
+        console.log("Price Comparison:");
+        console.log("Current Price:", currentPrice);
+        console.log("Oracle Price (scaled):", scaledOraclePrice);
+        console.log("Price Limit:", priceLimit);
+        console.log("ZeroForOne:", order.zeroForOne);
+        console.log("Tolerance (scaled):", scaledTolerance);
+
+        // For buy orders (zeroForOne: false), execute when price goes up
+        // For sell orders (zeroForOne: true), execute when price goes down
+        bool shouldExecute = (order.zeroForOne && currentPrice <= priceLimit) ||
+            (!order.zeroForOne && currentPrice >= priceLimit);
+        
+        console.log("Should execute order:", shouldExecute);
+        console.log("Current price vs limit:", currentPrice >= priceLimit ? "above" : "below");
+
+        if (shouldExecute) {
+            console.log("Executing limit order - conditions met");
+            _executeLimitOrder(key, order);
+            // Set isActive to false after execution
+            order.isActive = false;
+            console.log("Order marked as inactive");
+        } else {
+            console.log("Limit order conditions not met");
+        }
+
+        return (this.beforeSwap.selector, BeforeSwapDeltaLibrary.ZERO_DELTA, 0);
+    }
+
+    function placeOrder(
+        PoolKey calldata key,
+        uint256 amount,
+        uint256 tolerance,
+        bool zeroForOne
+    ) external {
+        if (amount == 0) revert InvalidAmount();
+        if (tolerance > 10_000) revert InvalidTolerance();
 
         // Get oracle price
         uint256 oraclePrice = priceOracle.getLatestPrice(
             ERC20(Currency.unwrap(key.currency1)).name()
         );
 
-        // Calculate price limit
-        uint256 priceLimit;
-        if (tolerance == 0) {
-            priceLimit = oraclePrice; // Exact price match required
-        } else {
-            priceLimit = oraclePrice + (oraclePrice * tolerance) / 100;
-        }
+        // check if user already has an active limit order for this pool
+        LimitOrder storage existingOrder = limitOrders[key.toId()][msg.sender];
 
-        // Check if user already has an active limit order for this pool
-        LimitOrder storage existingOrder = limitOrders[key.toId()][sender];
-        
         if (existingOrder.isActive) {
-            // If price is good, execute the existing order
-            if (currentPrice <= priceLimit) {
-                _executeLimitOrder(key, existingOrder);
-            } else {
-                revert("Active limit order already exists");
-            }
-        } else {
-            // Create new limit order if none exists
-            _createLimitOrder(key, params.amountSpecified, oraclePrice, tolerance, params.zeroForOne);
+            revert("Active limit order already exists");
         }
 
-        return (
-            BaseHook.beforeSwap.selector,
-            BeforeSwapDeltaLibrary.ZERO_DELTA,
-            0
+        // Calculate fee amount using pool's fee parameter
+        uint256 feeAmount = (amount * key.fee) / 1000000;
+        uint256 totalAmount = amount + feeAmount;
+
+        // Transfer tokens from user to hook contract
+        Currency token = zeroForOne ? key.currency0 : key.currency1;
+        ERC20 tokenContract = ERC20(Currency.unwrap(token));
+
+        console.log("Token balances before transfer:");
+        console.log("User balance:", tokenContract.balanceOf(msg.sender));
+        console.log("Hook balance:", tokenContract.balanceOf(address(this)));
+        console.log(
+            "User allowance:",
+            tokenContract.allowance(msg.sender, address(this))
+        );
+        console.log("Amount:", amount);
+        console.log("Fee amount:", feeAmount);
+        console.log("Total amount:", totalAmount);
+
+        // Transfer the total amount (including fees) from user to hook
+        tokenContract.transferFrom(msg.sender, address(this), totalAmount);
+
+        console.log("Token balances after transfer:");
+        console.log("User balance:", tokenContract.balanceOf(msg.sender));
+        console.log("Hook balance:", tokenContract.balanceOf(address(this)));
+
+        limitOrders[key.toId()][msg.sender] = LimitOrder({
+            user: msg.sender,
+            amount: amount, // Store original amount without fees
+            totalAmount: totalAmount, // Store total amount including fees
+            oraclePrice: oraclePrice,
+            tolerance: tolerance,
+            zeroForOne: zeroForOne,
+            isActive: true,
+            tokensTransferred: true // Set to true since we've already transferred tokens
+        });
+
+        emit LimitOrderPlaced(
+            key.toId(),
+            msg.sender,
+            amount,
+            oraclePrice,
+            tolerance
         );
     }
 
@@ -149,33 +261,31 @@ contract NewEraHook is BaseHook {
         PoolKey memory key,
         LimitOrder storage order
     ) internal {
-        // Check if tokens need to be transferred
-        if (!order.tokensTransferred) {
-            Currency tokenToSell = order.zeroForOne ? key.currency0 : key.currency1;
-            
-            // Transfer tokens using pool manager
-            poolManager.sync(tokenToSell);
-            poolManager.take(tokenToSell, address(this), order.amount);
-            order.tokensTransferred = true;
-        }
+        Currency token = order.zeroForOne ? key.currency0 : key.currency1;
+        ERC20 tokenContract = ERC20(Currency.unwrap(token));
 
-        // Rest of the execution code...
+        // Transfer tokens to pool manager using the stored total amount
+        tokenContract.transfer(address(poolManager), order.totalAmount);
+
         IPoolManager.SwapParams memory params = IPoolManager.SwapParams({
             zeroForOne: order.zeroForOne,
             amountSpecified: int256(order.amount),
             sqrtPriceLimitX96: order.zeroForOne
-                ? TickMath.MIN_SQRT_PRICE + 1
-                : TickMath.MAX_SQRT_PRICE - 1
+                ? TickMath.getSqrtPriceAtTick(-1)
+                : TickMath.getSqrtPriceAtTick(1)
         });
 
-        // Execute swap
         BalanceDelta delta = poolManager.swap(key, params, "");
 
-        // Handle token transfers
-        if (order.zeroForOne) {
+        if (params.zeroForOne) {
+            // Negative Value => Money leaving user's wallet
+            // Settle with PoolManager
             if (delta.amount0() < 0) {
                 _settle(key.currency0, uint128(-delta.amount0()));
             }
+
+            // Positive Value => Money coming into user's wallet
+            // Take from PM
             if (delta.amount1() > 0) {
                 _take(key.currency1, uint128(delta.amount1()));
             }
@@ -183,59 +293,13 @@ contract NewEraHook is BaseHook {
             if (delta.amount1() < 0) {
                 _settle(key.currency1, uint128(-delta.amount1()));
             }
+
             if (delta.amount0() > 0) {
                 _take(key.currency0, uint128(delta.amount0()));
             }
         }
 
-        // Clear the order
-        order.isActive = false;
-
-        // Get current tick for event emission
-        address poolAddress = address(uint160(uint256(keccak256(abi.encode(key.toId())))));
-        bytes32 slot0 = IExtsload(poolAddress).extsload(bytes32(uint256(0)));
-        int24 currentTick = int24(uint24(uint256(slot0)));
-
-        emit LimitOrderExecuted(
-            key.toId(),
-            order.user,
-            order.amount,
-            TickMath.getSqrtPriceAtTick(currentTick)
-        );
-    }
-
-    function _createLimitOrder(
-        PoolKey memory key,
-        int256 amountSpecified,
-        uint256 oraclePrice,
-        uint256 tolerance,
-        bool zeroForOne
-    ) internal {
-        if (amountSpecified <= 0) revert InvalidAmount();
-        if (oraclePrice > 10000) revert InvalidTolerance(); // Max 100% tolerance
-
-        PoolId poolId = key.toId();
-        
-        // Create limit order using the passed oraclePrice
-        limitOrders[poolId][msg.sender] = LimitOrder({
-            user: msg.sender,
-            amount: uint256(amountSpecified),
-            oraclePrice: oraclePrice,
-            tolerance: tolerance,
-            zeroForOne: zeroForOne,
-            isActive: true,
-            tokensTransferred: false
-        });
-
-        // Transfer tokens using pool manager
-        Currency token = zeroForOne ? key.currency0 : key.currency1;
-        poolManager.sync(token);
-        poolManager.take(token, address(this), uint256(amountSpecified));
-        
-        // Set tokensTransferred to true after successful transfer
-        limitOrders[poolId][msg.sender].tokensTransferred = true;
-
-        emit LimitOrderPlaced(poolId, msg.sender, uint256(amountSpecified), oraclePrice, tolerance);
+        emit LimitOrderExecuted(key.toId(), order.user, order.amount, 0);
     }
 
     function updateLimitOrder(
@@ -255,7 +319,13 @@ contract NewEraHook is BaseHook {
         order.amount = newAmount;
         order.tolerance = newTolerance;
 
-        emit LimitOrderPlaced(poolId, msg.sender, newAmount, order.oraclePrice, newTolerance);
+        emit LimitOrderPlaced(
+            poolId,
+            msg.sender,
+            newAmount,
+            order.oraclePrice,
+            newTolerance
+        );
     }
 
     function cancelLimitOrder(PoolKey calldata key) external {
