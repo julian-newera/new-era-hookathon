@@ -48,13 +48,13 @@ contract NewEraHookBasicTest is Test, Deployers {
         string[] memory assets = new string[](1);
         assets[0] = "TEST";
         uint256[] memory prices = new uint256[](1);
-        prices[0] = 100; // Changed from 1000 to 100
+        prices[0] = 100;
         priceOracle.updatePrices(assets, prices);
         
         // Set up hook flags
         uint160 flags = uint160(
             Hooks.BEFORE_SWAP_FLAG |
-            Hooks.BEFORE_INITIALIZE_FLAG
+            Hooks.BEFORE_INITIALIZE_FLAG 
         );
         
         // Deploy hook with correct constructor args
@@ -75,11 +75,11 @@ contract NewEraHookBasicTest is Test, Deployers {
         // Initialize pool
         (key,) = initPool(currency0, currency1, IHooks(address(hook)), 500, TickMath.getSqrtPriceAtTick(0));
 
-        // Add initial liquidity with smaller amount
+        // Add initial liquidity
         IPoolManager.ModifyLiquidityParams memory params = IPoolManager.ModifyLiquidityParams({
             tickLower: -1000,
             tickUpper: 1000,
-            liquidityDelta: 1e12, // Reduced from 1e18 to 1e12
+            liquidityDelta: 1e12,
             salt: 0
         });
         modifyLiquidityRouter.modifyLiquidity(key, params, "");
@@ -123,7 +123,7 @@ contract NewEraHookBasicTest is Test, Deployers {
         
         // Verify order was created
         (address orderUser, uint256 orderAmount, uint256 orderTotalAmount, uint256 oraclePrice, uint256 orderTolerance, bool orderZeroForOne, bool isActive, bool tokensTransferred) = 
-            hook.limitOrders(key.toId(), user);
+            hook.limitOrders(key.toId(), user, 0);
         
         assertEq(orderUser, user, "Incorrect order user");
         assertEq(orderAmount, amount, "Incorrect order amount");
@@ -138,7 +138,7 @@ contract NewEraHookBasicTest is Test, Deployers {
     function test_limitOrderExecution() public {
         vm.startPrank(user);
         
-        uint256 amount = 100; // Base amount in wei
+        uint256 amount = 200;
         uint256 tolerance = 100 / 100; // 1%
         bool zeroForOne = false; // Buy order
         
@@ -176,7 +176,7 @@ contract NewEraHookBasicTest is Test, Deployers {
         
         // Verify order was created
         (address orderUser, uint256 orderAmount, uint256 orderTotalAmount, uint256 orderOraclePrice, uint256 orderTolerance, bool orderZeroForOne, bool isActive, bool tokensTransferred) = 
-            hook.limitOrders(key.toId(), user);
+            hook.limitOrders(key.toId(), user, 0);
         assertTrue(isActive, "Limit order should be created and active");
         assertFalse(orderZeroForOne, "Should be a buy order");
         assertEq(orderTotalAmount, totalAmount, "Total amount should match");
@@ -212,7 +212,7 @@ contract NewEraHookBasicTest is Test, Deployers {
         );
 
         // Verify order was executed by the hook's automatic check
-        (,,,,,, bool finalIsActive,) = hook.limitOrders(key.toId(), user);
+        (,,,,,, bool finalIsActive,) = hook.limitOrders(key.toId(), user, 0);
         assertFalse(finalIsActive, "Limit order should be executed and inactive");
     }
 
