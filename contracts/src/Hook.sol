@@ -56,6 +56,7 @@ contract NewEraHook is BaseHook {
     IPriceOracle public immutable priceOracle;
     mapping(PoolId => TWAMMHelper.State) internal twammStates;
     mapping(PoolId => address) public poolAddresses;
+    address public immutable admin;
 
     // Errors
     error InvalidTolerance();
@@ -65,6 +66,7 @@ contract NewEraHook is BaseHook {
     error PriceAboveLimit();
     error LimitOrderConditionsNotMet();
     error TooManyOrders();
+    error OnlyAdmin();
 
     // Constants
     uint256 constant MAX_ORDERS_PER_USER = 5;
@@ -74,6 +76,7 @@ contract NewEraHook is BaseHook {
         address _priceOracle
     ) BaseHook(_poolManager) {
         priceOracle = IPriceOracle(_priceOracle);
+        admin = msg.sender;
     }
 
     function getHookPermissions()
@@ -197,7 +200,7 @@ contract NewEraHook is BaseHook {
     }
 
     function _afterSwap(
-        address sender,
+        address,
         PoolKey calldata key,
         IPoolManager.SwapParams calldata params,
         BalanceDelta,
@@ -357,37 +360,51 @@ contract NewEraHook is BaseHook {
 
     function updateLimitOrder(
         PoolKey calldata key,
+        address orderOwner,
+        uint256 orderId,
         uint256 newAmount,
         uint256 newTolerance
     ) external {
         PoolId poolId = key.toId();
-        LimitOrder storage order = limitOrders[poolId][msg.sender][0];
+        LimitOrder storage order = limitOrders[poolId][orderOwner][orderId];
 
-        if (!order.isActive) revert NoActiveLimitOrder();
+        if (order.user == address(0)) revert NoActiveLimitOrder();
         if (order.user != msg.sender) revert UnauthorizedCaller();
-        if (newTolerance > 100) revert InvalidTolerance();
+        if (!order.isActive) revert NoActiveLimitOrder();
+        if (newTolerance > 10000) revert InvalidTolerance(); // Max 100% in basis points
         if (newAmount == 0) revert InvalidAmount();
+
+        // Calculate new total amount including fees
+        uint256 poolFee = key.fee;
+        uint256 fee = (newAmount * poolFee) / 10000;
+        uint256 newTotalAmount = newAmount + fee;
 
         // Update the order
         order.amount = newAmount;
+        order.totalAmount = newTotalAmount;
         order.tolerance = newTolerance;
 
         emit LimitOrderPlaced(
             poolId,
             msg.sender,
-            0,
+            orderId,
             newAmount,
             order.oraclePrice,
             newTolerance
         );
     }
 
-    function cancelLimitOrder(PoolKey calldata key, uint256 orderId) external {
+    function cancelLimitOrder(
+        PoolKey calldata key,
+        address orderOwner,
+        uint256 orderId
+    ) external {
         PoolId poolId = key.toId();
-        LimitOrder storage order = limitOrders[poolId][msg.sender][orderId];
+        LimitOrder storage order = limitOrders[poolId][orderOwner][orderId];
 
-        if (!order.isActive) revert NoActiveLimitOrder();
+        if (order.user == address(0)) revert NoActiveLimitOrder();
         if (order.user != msg.sender) revert UnauthorizedCaller();
+        if (!order.isActive) revert NoActiveLimitOrder();
 
         // Return tokens to user if they were transferred
         if (order.tokensTransferred) {
@@ -396,7 +413,7 @@ contract NewEraHook is BaseHook {
         }
 
         // Clear the order
-        delete limitOrders[poolId][msg.sender][orderId];
+        delete limitOrders[poolId][orderOwner][orderId];
 
         emit LimitOrderCancelled(poolId, msg.sender, orderId, order.amount);
     }
@@ -418,5 +435,17 @@ contract NewEraHook is BaseHook {
         baseAmount = amount;
         totalAmount = amount + fee;
         return (baseAmount, totalAmount);
+    }
+
+    function withdrawFunds(Currency token) external {
+        if (msg.sender != admin) revert OnlyAdmin();
+        
+        // Get the token balance in the hook
+        uint256 balance = token.balanceOf(address(this));
+        
+        if (balance > 0) {
+            // Transfer all tokens to admin
+            token.transfer(admin, balance);
+        }
     }
 }

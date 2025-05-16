@@ -96,7 +96,7 @@ contract NewEraHookBasicTest is Test, Deployers {
         token0.approve(address(manager), type(uint256).max);
         token1.approve(address(manager), type(uint256).max);
         vm.stopPrank();
-
+        
         // Approve hook to spend tokens on behalf of pool manager
         token0.approve(address(manager), type(uint256).max);
         token1.approve(address(manager), type(uint256).max);
@@ -255,7 +255,7 @@ contract NewEraHookBasicTest is Test, Deployers {
             amountSpecified: 1e18,
             sqrtPriceLimitX96: targetSqrtPrice
         });
-
+        
         // Execute swap through router
         bytes memory hookData = abi.encode(user);
         swapRouter.swap(
@@ -271,6 +271,295 @@ contract NewEraHookBasicTest is Test, Deployers {
         
         assertFalse(isActive1, "First order should be executed");
         assertFalse(isActive2, "Second order should be executed");
+    }
+
+    function test_updateLimitOrder() public {
+        vm.startPrank(user);
+        
+        // Place initial order
+        uint256 initialAmount = 100;
+        uint256 initialTolerance = 100; // 1%
+        bool zeroForOne = false; // Buy order
+        
+        // Calculate initial amounts
+        (uint256 baseAmount, uint256 totalAmount) = hook.calculateOrderAmounts(initialAmount, key);
+        token1.mint(user, totalAmount);
+        token1.approve(address(hook), totalAmount);
+        token1.approve(address(manager), totalAmount);
+        
+        // Place order
+        hook.placeOrder(key, baseAmount, totalAmount, initialTolerance, zeroForOne);
+        
+        // Verify initial order state
+        (address orderUser, uint256 orderAmount, uint256 orderTotalAmount, uint256 oraclePrice, uint256 orderTolerance, bool orderZeroForOne, bool isActive, bool tokensTransferred) = 
+            hook.limitOrders(key.toId(), user, 0);
+        assertEq(orderAmount, initialAmount, "Initial amount should match");
+        assertEq(orderTolerance, initialTolerance, "Initial tolerance should match");
+        assertTrue(isActive, "Order should be active");
+        
+        // Update order with new values
+        uint256 newAmount = 200;
+        uint256 newTolerance = 200; // 2%
+        hook.updateLimitOrder(key, user, 0, newAmount, newTolerance);
+        
+        // Verify updated order state
+        (orderUser, orderAmount, orderTotalAmount, oraclePrice, orderTolerance, orderZeroForOne, isActive, tokensTransferred) = 
+            hook.limitOrders(key.toId(), user, 0);
+        assertEq(orderAmount, newAmount, "Amount should be updated");
+        assertEq(orderTolerance, newTolerance, "Tolerance should be updated");
+        assertTrue(isActive, "Order should still be active");
+        
+        // Verify total amount was updated correctly
+        (uint256 expectedBaseAmount, uint256 expectedTotalAmount) = hook.calculateOrderAmounts(newAmount, key);
+        assertEq(orderTotalAmount, expectedTotalAmount, "Total amount should be updated correctly");
+        
+        vm.stopPrank();
+    }
+
+    function test_RevertWhen_UpdateLimitOrderUnauthorized() public {
+        // First create an order as the unauthorized address
+        address unauthorizedUser = address(0x456);
+        
+        // Mint and approve tokens for unauthorized user
+        vm.startPrank(unauthorizedUser);
+        token1.mint(unauthorizedUser, 1000e18); // Mint enough tokens
+        token1.approve(address(hook), type(uint256).max);
+        token1.approve(address(manager), type(uint256).max);
+        
+        // Place order
+        uint256 initialAmount = 100;
+        uint256 initialTolerance = 100;
+        (uint256 baseAmount, uint256 totalAmount) = hook.calculateOrderAmounts(initialAmount, key);
+        hook.placeOrder(key, baseAmount, totalAmount, initialTolerance, false);
+        
+        // Verify order was created and is active
+        (address orderUser, uint256 orderAmount, uint256 orderTotalAmount, uint256 oraclePrice, uint256 orderTolerance, bool orderZeroForOne, bool isActive, bool tokensTransferred) = 
+            hook.limitOrders(key.toId(), unauthorizedUser, 0);
+        require(isActive, "Order should be active");
+        require(orderUser == unauthorizedUser, "Order should belong to unauthorized user");
+        
+        vm.stopPrank();
+        
+        // Now try to update the unauthorized user's order as a different address
+        address attacker = address(0x789);
+        vm.prank(attacker);
+        vm.expectRevert(NewEraHook.UnauthorizedCaller.selector);
+        hook.updateLimitOrder(key, unauthorizedUser, 0, 200, 200);
+    }
+
+    function test_RevertWhen_UpdateLimitOrderInvalidTolerance() public {
+        vm.startPrank(user);
+        
+        // Place initial order
+        uint256 initialAmount = 100;
+        uint256 initialTolerance = 100;
+        (uint256 baseAmount, uint256 totalAmount) = hook.calculateOrderAmounts(initialAmount, key);
+        token1.mint(user, totalAmount);
+        token1.approve(address(hook), totalAmount);
+        token1.approve(address(manager), totalAmount);
+        hook.placeOrder(key, baseAmount, totalAmount, initialTolerance, false);
+        
+        // Try to update with invalid tolerance (>100%)
+        vm.expectRevert(NewEraHook.InvalidTolerance.selector);
+        hook.updateLimitOrder(key, user, 0, 200, 10001);
+        
+        vm.stopPrank();
+    }
+
+    function test_RevertWhen_UpdateLimitOrderZeroAmount() public {
+        vm.startPrank(user);
+        
+        // Place initial order
+        uint256 initialAmount = 100;
+        uint256 initialTolerance = 100;
+        (uint256 baseAmount, uint256 totalAmount) = hook.calculateOrderAmounts(initialAmount, key);
+        token1.mint(user, totalAmount);
+        token1.approve(address(hook), totalAmount);
+        token1.approve(address(manager), totalAmount);
+        hook.placeOrder(key, baseAmount, totalAmount, initialTolerance, false);
+        
+        // Try to update with zero amount
+        vm.expectRevert(NewEraHook.InvalidAmount.selector);
+        hook.updateLimitOrder(key, user, 0, 0, 200);
+        
+        vm.stopPrank();
+    }
+
+    function test_cancelLimitOrder() public {
+        vm.startPrank(user);
+        
+        // Place initial order
+        uint256 initialAmount = 100;
+        uint256 initialTolerance = 100;
+        (uint256 baseAmount, uint256 totalAmount) = hook.calculateOrderAmounts(initialAmount, key);
+        token1.mint(user, totalAmount);
+        token1.approve(address(hook), totalAmount);
+        token1.approve(address(manager), totalAmount);
+        
+        // Place order
+        hook.placeOrder(key, baseAmount, totalAmount, initialTolerance, false);
+        
+        // Record initial balance
+        uint256 initialBalance = token1.balanceOf(user);
+        
+        // Cancel order
+        hook.cancelLimitOrder(key, user, 0);
+        
+        // Verify order was cancelled
+        (,,,,,, bool isActive,) = hook.limitOrders(key.toId(), user, 0);
+        assertFalse(isActive, "Order should be inactive after cancellation");
+        
+        // Verify tokens were returned
+        uint256 finalBalance = token1.balanceOf(user);
+        assertEq(finalBalance, initialBalance + totalAmount, "Tokens should be returned");
+        
+        vm.stopPrank();
+    }
+
+    function test_RevertWhen_CancelLimitOrderUnauthorized() public {
+        // First create an order as the unauthorized address
+        address unauthorizedUser = address(0x456);
+        
+        // Mint and approve tokens for unauthorized user
+        vm.startPrank(unauthorizedUser);
+        token1.mint(unauthorizedUser, 1000e18);
+        token1.approve(address(hook), type(uint256).max);
+        token1.approve(address(manager), type(uint256).max);
+        
+        // Place order
+        uint256 initialAmount = 100;
+        uint256 initialTolerance = 100;
+        (uint256 baseAmount, uint256 totalAmount) = hook.calculateOrderAmounts(initialAmount, key);
+        hook.placeOrder(key, baseAmount, totalAmount, initialTolerance, false);
+        
+        // Verify order was created and is active
+        (address orderUser, uint256 orderAmount, uint256 orderTotalAmount, uint256 oraclePrice, uint256 orderTolerance, bool orderZeroForOne, bool isActive, bool tokensTransferred) = 
+            hook.limitOrders(key.toId(), unauthorizedUser, 0);
+        require(isActive, "Order should be active");
+        require(orderUser == unauthorizedUser, "Order should belong to unauthorized user");
+        
+        vm.stopPrank();
+        
+        // Now try to cancel the unauthorized user's order as a different address
+        address attacker = address(0x789);
+        vm.prank(attacker);
+        vm.expectRevert(NewEraHook.UnauthorizedCaller.selector);
+        hook.cancelLimitOrder(key, unauthorizedUser, 0);
+    }
+
+    function test_RevertWhen_CancelLimitOrderNotActive() public {
+        vm.startPrank(user);
+        
+        // Place initial order
+        uint256 initialAmount = 100;
+        uint256 initialTolerance = 100;
+        (uint256 baseAmount, uint256 totalAmount) = hook.calculateOrderAmounts(initialAmount, key);
+        token1.mint(user, totalAmount);
+        token1.approve(address(hook), totalAmount);
+        token1.approve(address(manager), totalAmount);
+        
+        // Place order
+        hook.placeOrder(key, baseAmount, totalAmount, initialTolerance, false);
+        
+        // Cancel order first time
+        hook.cancelLimitOrder(key, user, 0);
+        
+        // Try to cancel the same order again
+        vm.expectRevert(NewEraHook.NoActiveLimitOrder.selector);
+        hook.cancelLimitOrder(key, user, 0);
+        
+        vm.stopPrank();
+    }
+
+    function test_withdrawFunds() public {
+        // First place an order to have tokens in the contract
+        vm.startPrank(user);
+        uint256 amount = 100;
+        (uint256 baseAmount, uint256 totalAmount) = hook.calculateOrderAmounts(amount, key);
+        token1.mint(user, totalAmount);
+        token1.approve(address(hook), totalAmount);
+        token1.approve(address(manager), totalAmount);
+        hook.placeOrder(key, baseAmount, totalAmount, 100, false);
+        vm.stopPrank();
+
+        // Record initial balances
+        uint256 initialHookBalance = token1.balanceOf(address(hook));
+        uint256 initialAdminBalance = token1.balanceOf(address(this)); // this is the admin in tests
+
+        // Withdraw funds as admin
+        hook.withdrawFunds(Currency.wrap(address(token1)));
+
+        // Verify balances
+        uint256 finalHookBalance = token1.balanceOf(address(hook));
+        uint256 finalAdminBalance = token1.balanceOf(address(this));
+
+        assertEq(finalHookBalance, 0, "Hook should have 0 tokens after withdrawal");
+        assertEq(finalAdminBalance, initialAdminBalance + initialHookBalance, "Admin should receive all tokens");
+    }
+
+    function test_RevertWhen_WithdrawFundsUnauthorized() public {
+        // First place an order to have tokens in the contract
+        vm.startPrank(user);
+        uint256 amount = 100;
+        (uint256 baseAmount, uint256 totalAmount) = hook.calculateOrderAmounts(amount, key);
+        token1.mint(user, totalAmount);
+        token1.approve(address(hook), totalAmount);
+        token1.approve(address(manager), totalAmount);
+        hook.placeOrder(key, baseAmount, totalAmount, 100, false);
+        vm.stopPrank();
+
+        // Try to withdraw as non-admin
+        address attacker = address(0x789);
+        vm.prank(attacker);
+        vm.expectRevert(NewEraHook.OnlyAdmin.selector);
+        hook.withdrawFunds(Currency.wrap(address(token1)));
+    }
+
+    function test_withdrawFundsMultipleTokens() public {
+        // Place orders with both tokens to have multiple token types in the contract
+        vm.startPrank(user);
+        
+        // Place order with token1
+        uint256 amount1 = 100;
+        (uint256 baseAmount1, uint256 totalAmount1) = hook.calculateOrderAmounts(amount1, key);
+        token1.mint(user, totalAmount1);
+        token1.approve(address(hook), totalAmount1);
+        token1.approve(address(manager), totalAmount1);
+        hook.placeOrder(key, baseAmount1, totalAmount1, 100, false);
+        
+        // Place order with token0
+        uint256 amount0 = 100;
+        (uint256 baseAmount0, uint256 totalAmount0) = hook.calculateOrderAmounts(amount0, key);
+        token0.mint(user, totalAmount0);
+        token0.approve(address(hook), totalAmount0);
+        token0.approve(address(manager), totalAmount0);
+        hook.placeOrder(key, baseAmount0, totalAmount0, 100, true);
+        
+        vm.stopPrank();
+
+        // Record initial balances
+        uint256 initialHookBalance0 = token0.balanceOf(address(hook));
+        uint256 initialHookBalance1 = token1.balanceOf(address(hook));
+        uint256 initialAdminBalance0 = token0.balanceOf(address(this));
+        uint256 initialAdminBalance1 = token1.balanceOf(address(this));
+
+        // Withdraw token0
+        hook.withdrawFunds(Currency.wrap(address(token0)));
+        
+        // Verify token0 balances
+        uint256 finalHookBalance0 = token0.balanceOf(address(hook));
+        uint256 finalAdminBalance0 = token0.balanceOf(address(this));
+        assertEq(finalHookBalance0, 0, "Hook should have 0 token0 after withdrawal");
+        assertEq(finalAdminBalance0, initialAdminBalance0 + initialHookBalance0, "Admin should receive all token0");
+
+        // Withdraw token1
+        hook.withdrawFunds(Currency.wrap(address(token1)));
+        
+        // Verify token1 balances
+        uint256 finalHookBalance1 = token1.balanceOf(address(hook));
+        uint256 finalAdminBalance1 = token1.balanceOf(address(this));
+        assertEq(finalHookBalance1, 0, "Hook should have 0 token1 after withdrawal");
+        assertEq(finalAdminBalance1, initialAdminBalance1 + initialHookBalance1, "Admin should receive all token1");
     }
 
     // function test_limitOrderUpdate() public {
