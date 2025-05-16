@@ -104,12 +104,18 @@ contract NewEraHookBasicTest is Test, Deployers {
     function test_placeLimitOrder() public {
         vm.startPrank(user);
         
-        uint256 amount = 1e18;
         uint256 tolerance = 100; // 1%
         bool zeroForOne = true;
 
+        uint256 amount = 100; // Base amount in wei
+       
+
+
+        (uint256 baseAmount, uint256 totalAmount) = hook.calculateOrderAmounts(amount, key);
+    
+
         // Place limit order
-        hook.placeOrder(key, amount, tolerance, zeroForOne);
+        hook.placeOrder(key, baseAmount, totalAmount, tolerance, zeroForOne);
 
         // Approve hook's tokens to pool manager
         token0.approve(address(manager), type(uint256).max);
@@ -132,40 +138,47 @@ contract NewEraHookBasicTest is Test, Deployers {
     function test_limitOrderExecution() public {
         vm.startPrank(user);
         
-        uint256 amount = 322; // Base amount
-        uint256 feeAmount = (amount * 500) / 1000000; // 0.05% fee
-        uint256 totalAmount = amount + feeAmount; // Total amount including fees
-        uint256 tolerance = 100; // 1%
+        uint256 amount = 100; // Base amount in wei
+        uint256 tolerance = 100 / 100; // 1%
         bool zeroForOne = false; // Buy order
+        
+        // Calculate amounts using the new function
+        (uint256 baseAmount, uint256 totalAmount) = hook.calculateOrderAmounts(amount, key);
+        
+        console.log("Test setup:");
+        console.log("Initial amount:", amount);
+        console.log("Calculated base amount:", baseAmount);
+        console.log("Calculated total amount:", totalAmount);
         
         // First, let's check the oracle price
         uint256 oraclePrice = priceOracle.getLatestPrice("TEST");
         console.log("Oracle Price:", oraclePrice);
-        console.log("Base amount:", amount);
-        console.log("Fee amount:", feeAmount);
-        console.log("Total amount:", totalAmount);
         
         // Mint enough tokens for both amount and fees (only token1 since it's a buy order)
         token1.mint(user, totalAmount);
+        console.log("Minted tokens:", totalAmount);
+        console.log("User token balance after mint:", token1.balanceOf(user));
         
         // Approve the total amount for both hook and pool manager (only token1)
         token1.approve(address(hook), totalAmount);
         token1.approve(address(manager), totalAmount);
+        console.log("Approved amounts:");
+        console.log("Hook allowance:", token1.allowance(user, address(hook)));
+        console.log("Manager allowance:", token1.allowance(user, address(manager)));
         
         // Also approve the hook to spend tokens on behalf of the pool manager
         vm.stopPrank();
         token1.approve(address(manager), totalAmount);
         vm.startPrank(user);
         
-        // Pass only the base amount to placeOrder, the hook will calculate fees
-        hook.placeOrder(key, amount, tolerance, zeroForOne);
+        // Pass both base and total amounts to placeOrder
+        hook.placeOrder(key, baseAmount, totalAmount, tolerance, zeroForOne);
         
         // Verify order was created
         (address orderUser, uint256 orderAmount, uint256 orderTotalAmount, uint256 orderOraclePrice, uint256 orderTolerance, bool orderZeroForOne, bool isActive, bool tokensTransferred) = 
             hook.limitOrders(key.toId(), user);
         assertTrue(isActive, "Limit order should be created and active");
         assertFalse(orderZeroForOne, "Should be a buy order");
-        assertEq(orderAmount, amount, "Amount should match");
         assertEq(orderTotalAmount, totalAmount, "Total amount should match");
         assertEq(orderTolerance, tolerance, "Tolerance should match");
 

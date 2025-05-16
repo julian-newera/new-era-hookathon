@@ -60,6 +60,7 @@ contract NewEraHook is BaseHook {
     error UnauthorizedCaller();
     error InvalidAmount();
     error PriceAboveLimit();
+    error LimitOrderConditionsNotMet();
 
     constructor(
         IPoolManager _poolManager,
@@ -83,7 +84,7 @@ contract NewEraHook is BaseHook {
                 beforeRemoveLiquidity: false,
                 afterRemoveLiquidity: false,
                 beforeSwap: true,
-                afterSwap: false,
+                afterSwap: true,
                 beforeDonate: false,
                 afterDonate: false,
                 beforeSwapReturnDelta: false,
@@ -117,10 +118,9 @@ contract NewEraHook is BaseHook {
         IPoolManager.SwapParams calldata params,
         bytes calldata hookData
     ) internal override returns (bytes4, BeforeSwapDelta, uint24) {
-        console.log("_beforeSwap called with sender:", sender);
+       
 
         if (sender == address(this)) {
-            console.log("Sender is hook contract, skipping");
             return (
                 this.beforeSwap.selector,
                 BeforeSwapDeltaLibrary.ZERO_DELTA,
@@ -130,14 +130,12 @@ contract NewEraHook is BaseHook {
 
         // Decode the order owner's address from hookData
         address orderOwner = abi.decode(hookData, (address));
-        console.log("Order owner from hookData:", orderOwner);
 
         PoolId poolId = key.toId();
 
         // Check for orders under the order owner's address
         LimitOrder storage order = limitOrders[poolId][orderOwner];
         if (!order.isActive) {
-            console.log("No active order found for order owner");
             return (
                 this.beforeSwap.selector,
                 BeforeSwapDeltaLibrary.ZERO_DELTA,
@@ -145,7 +143,6 @@ contract NewEraHook is BaseHook {
             );
         }
 
-        console.log("Found active order for order owner");
 
         // Get current price from swap parameters
         uint160 sqrtPriceX96 = params.sqrtPriceLimitX96;
@@ -156,47 +153,50 @@ contract NewEraHook is BaseHook {
         // Scale oracle price to match pool price scale (1e18)
         uint256 scaledOraclePrice = (order.oraclePrice * 1e18) / 100; // Convert from 100 to 1.00
         uint256 scaledTolerance = (order.tolerance * 1e18) / 10000; // Convert basis points to percentage
+        console.log("scaledOraclePrice", scaledOraclePrice);
+        console.log("scaledTolerance", scaledTolerance);
 
         // Calculate price limit based on oracle price and tolerance
         uint256 priceLimit = order.zeroForOne
             ? scaledOraclePrice - scaledTolerance // For sell orders
             : scaledOraclePrice + scaledTolerance; // For buy orders
 
-        console.log("Price Comparison:");
-        console.log("Current Price:", currentPrice);
-        console.log("Oracle Price (scaled):", scaledOraclePrice);
-        console.log("Price Limit:", priceLimit);
-        console.log("ZeroForOne:", order.zeroForOne);
-        console.log("Tolerance (scaled):", scaledTolerance);
-
         // For buy orders (zeroForOne: false), execute when price goes up
         // For sell orders (zeroForOne: true), execute when price goes down
         bool shouldExecute = (order.zeroForOne && currentPrice <= priceLimit) ||
             (!order.zeroForOne && currentPrice >= priceLimit);
         
-        console.log("Should execute order:", shouldExecute);
-        console.log("Current price vs limit:", currentPrice >= priceLimit ? "above" : "below");
 
         if (shouldExecute) {
-            console.log("Executing limit order - conditions met");
             _executeLimitOrder(key, order);
             // Set isActive to false after execution
             order.isActive = false;
-            console.log("Order marked as inactive");
         } else {
-            console.log("Limit order conditions not met");
+            revert LimitOrderConditionsNotMet();
         }
 
         return (this.beforeSwap.selector, BeforeSwapDeltaLibrary.ZERO_DELTA, 0);
     }
 
+
+    // function _afterSwap(
+    //     address sender,
+    //     PoolKey calldata key,
+    //     IPoolManager.SwapParams calldata params,
+    //     BalanceDelta delta,
+    //     bytes calldata hookData
+    // ) internal override {   
+
+    // }
+
     function placeOrder(
         PoolKey calldata key,
-        uint256 amount,
+        uint256 baseAmount,
+        uint256 totalAmount,
         uint256 tolerance,
         bool zeroForOne
     ) external {
-        if (amount == 0) revert InvalidAmount();
+        if (baseAmount == 0) revert InvalidAmount();
         if (tolerance > 10_000) revert InvalidTolerance();
 
         // Get oracle price
@@ -210,36 +210,19 @@ contract NewEraHook is BaseHook {
         if (existingOrder.isActive) {
             revert("Active limit order already exists");
         }
-
-        // Calculate fee amount using pool's fee parameter
-        uint256 feeAmount = (amount * key.fee) / 1000000;
-        uint256 totalAmount = amount + feeAmount;
+        
 
         // Transfer tokens from user to hook contract
         Currency token = zeroForOne ? key.currency0 : key.currency1;
         ERC20 tokenContract = ERC20(Currency.unwrap(token));
 
-        console.log("Token balances before transfer:");
-        console.log("User balance:", tokenContract.balanceOf(msg.sender));
-        console.log("Hook balance:", tokenContract.balanceOf(address(this)));
-        console.log(
-            "User allowance:",
-            tokenContract.allowance(msg.sender, address(this))
-        );
-        console.log("Amount:", amount);
-        console.log("Fee amount:", feeAmount);
-        console.log("Total amount:", totalAmount);
 
         // Transfer the total amount (including fees) from user to hook
         tokenContract.transferFrom(msg.sender, address(this), totalAmount);
 
-        console.log("Token balances after transfer:");
-        console.log("User balance:", tokenContract.balanceOf(msg.sender));
-        console.log("Hook balance:", tokenContract.balanceOf(address(this)));
-
         limitOrders[key.toId()][msg.sender] = LimitOrder({
             user: msg.sender,
-            amount: amount, // Store original amount without fees
+            amount: baseAmount, // Store original amount without fees
             totalAmount: totalAmount, // Store total amount including fees
             oraclePrice: oraclePrice,
             tolerance: tolerance,
@@ -251,7 +234,7 @@ contract NewEraHook is BaseHook {
         emit LimitOrderPlaced(
             key.toId(),
             msg.sender,
-            amount,
+            baseAmount,
             oraclePrice,
             tolerance
         );
@@ -261,20 +244,19 @@ contract NewEraHook is BaseHook {
         PoolKey memory key,
         LimitOrder storage order
     ) internal {
-        Currency token = order.zeroForOne ? key.currency0 : key.currency1;
-        ERC20 tokenContract = ERC20(Currency.unwrap(token));
 
-        // Transfer tokens to pool manager using the stored total amount
-        tokenContract.transfer(address(poolManager), order.totalAmount);
+        // Calculate the actual amount we can swap (base amount without fees)
+        uint256 swapAmount = order.amount;
 
         IPoolManager.SwapParams memory params = IPoolManager.SwapParams({
             zeroForOne: order.zeroForOne,
-            amountSpecified: int256(order.amount),
+            amountSpecified: int256(swapAmount), // Use base amount for swap
             sqrtPriceLimitX96: order.zeroForOne
                 ? TickMath.getSqrtPriceAtTick(-1)
                 : TickMath.getSqrtPriceAtTick(1)
         });
 
+        // Execute the swap - the pool manager will take the tokens it needs during the swap
         BalanceDelta delta = poolManager.swap(key, params, "");
 
         if (params.zeroForOne) {
@@ -355,5 +337,14 @@ contract NewEraHook is BaseHook {
 
     function _take(Currency currency, uint128 amount) internal {
         poolManager.take(currency, address(this), amount);
+    }
+
+    
+    function calculateOrderAmounts(uint256 amount, PoolKey calldata key) external pure returns (uint256 baseAmount, uint256 totalAmount) {
+        uint256 poolFee = key.fee;
+        uint256 fee = (amount * poolFee) / 10000;
+        baseAmount = amount;
+        totalAmount = amount + fee;
+        return (baseAmount, totalAmount);
     }
 }
