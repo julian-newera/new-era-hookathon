@@ -54,7 +54,8 @@ contract NewEraHookBasicTest is Test, Deployers {
         // Set up hook flags
         uint160 flags = uint160(
             Hooks.BEFORE_SWAP_FLAG |
-            Hooks.BEFORE_INITIALIZE_FLAG 
+            Hooks.BEFORE_INITIALIZE_FLAG |
+            Hooks.AFTER_SWAP_FLAG
         );
         
         // Deploy hook with correct constructor args
@@ -214,6 +215,62 @@ contract NewEraHookBasicTest is Test, Deployers {
         // Verify order was executed by the hook's automatic check
         (,,,,,, bool finalIsActive,) = hook.limitOrders(key.toId(), user, 0);
         assertFalse(finalIsActive, "Limit order should be executed and inactive");
+    }
+
+    function test_afterSwapOrderExecution() public {
+        vm.startPrank(user);
+        
+        // Place two orders with different tolerances
+        uint256 amount1 = 100;
+        uint256 amount2 = 200;
+        uint256 tolerance1 = 50; // 0.5%
+        uint256 tolerance2 = 100; // 1%
+        bool zeroForOne = false; // Buy orders
+        
+        // Calculate amounts for first order
+        (uint256 baseAmount1, uint256 totalAmount1) = hook.calculateOrderAmounts(amount1, key);
+        token1.mint(user, totalAmount1);
+        token1.approve(address(hook), totalAmount1);
+        token1.approve(address(manager), totalAmount1);
+        
+        // Place first order
+        hook.placeOrder(key, baseAmount1, totalAmount1, tolerance1, zeroForOne);
+        
+        // Calculate amounts for second order
+        (uint256 baseAmount2, uint256 totalAmount2) = hook.calculateOrderAmounts(amount2, key);
+        token1.mint(user, totalAmount2);
+        token1.approve(address(hook), totalAmount2);
+        token1.approve(address(manager), totalAmount2);
+        
+        // Place second order
+        hook.placeOrder(key, baseAmount2, totalAmount2, tolerance2, zeroForOne);
+        
+        vm.stopPrank();
+
+        // Move price up significantly to trigger both orders
+        uint160 targetSqrtPrice = TickMath.getSqrtPriceAtTick(2000); // Move price up by 2000 ticks
+        
+        IPoolManager.SwapParams memory params = IPoolManager.SwapParams({
+            zeroForOne: false,
+            amountSpecified: 1e18,
+            sqrtPriceLimitX96: targetSqrtPrice
+        });
+
+        // Execute swap through router
+        bytes memory hookData = abi.encode(user);
+        swapRouter.swap(
+            key,
+            params,
+            PoolSwapTest.TestSettings({takeClaims: true, settleUsingBurn: false}),
+            hookData
+        );
+
+        // Verify both orders were executed
+        (,,,,,, bool isActive1,) = hook.limitOrders(key.toId(), user, 0);
+        (,,,,,, bool isActive2,) = hook.limitOrders(key.toId(), user, 1);
+        
+        assertFalse(isActive1, "First order should be executed");
+        assertFalse(isActive2, "Second order should be executed");
     }
 
     // function test_limitOrderUpdate() public {

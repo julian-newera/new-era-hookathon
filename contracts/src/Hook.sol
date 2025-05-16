@@ -6,7 +6,7 @@ import {Hooks} from "v4-core/src/libraries/Hooks.sol";
 import {IPoolManager} from "v4-core/src/interfaces/IPoolManager.sol";
 import {PoolKey} from "v4-core/src/types/PoolKey.sol";
 import {PoolId, PoolIdLibrary} from "v4-core/src/types/PoolId.sol";
-import {BalanceDelta} from "v4-core/src/types/BalanceDelta.sol";
+import {BalanceDelta, toBalanceDelta} from "v4-core/src/types/BalanceDelta.sol";
 import {BeforeSwapDelta, BeforeSwapDeltaLibrary} from "v4-core/src/types/BeforeSwapDelta.sol";
 import {Currency, CurrencyLibrary} from "v4-core/src/types/Currency.sol";
 import {TickMath} from "v4-core/src/libraries/TickMath.sol";
@@ -91,7 +91,7 @@ contract NewEraHook is BaseHook {
                 beforeRemoveLiquidity: false,
                 afterRemoveLiquidity: false,
                 beforeSwap: true,
-                afterSwap: false,
+                afterSwap: true,
                 beforeDonate: false,
                 afterDonate: false,
                 beforeSwapReturnDelta: false,
@@ -196,16 +196,65 @@ contract NewEraHook is BaseHook {
         return (this.beforeSwap.selector, BeforeSwapDeltaLibrary.ZERO_DELTA, 0);
     }
 
+    function _afterSwap(
+        address sender,
+        PoolKey calldata key,
+        IPoolManager.SwapParams calldata params,
+        BalanceDelta,
+        bytes calldata hookData
+    ) internal override returns (bytes4, int128) {
+        // Decode the order owner's address from hookData
+        address orderOwner = abi.decode(hookData, (address));
+        console.log("AfterSwap - Order owner from hookData:", orderOwner);
 
-    // function _afterSwap(
-    //     address sender,
-    //     PoolKey calldata key,
-    //     IPoolManager.SwapParams calldata params,
-    //     BalanceDelta delta,
-    //     bytes calldata hookData
-    // ) internal override {   
+        PoolId poolId = key.toId();
+        uint256 orderCount = userOrderCount[poolId][orderOwner];
 
-    // }
+        // Get current price from swap parameters
+        uint160 sqrtPriceX96 = params.sqrtPriceLimitX96;
+        uint256 currentPrice = (uint256(sqrtPriceX96) *
+            uint256(sqrtPriceX96) *
+            1e18) >> 192;
+
+        console.log("AfterSwap - Current Price:", currentPrice);
+
+        // Check all active orders for this user
+        uint256 i = 0;
+        while (i < orderCount) {
+            LimitOrder storage order = limitOrders[poolId][orderOwner][i];
+            if (!order.isActive) {
+                i++;
+                continue;
+            }
+
+            // Scale oracle price to match pool price scale (1e18)
+            uint256 scaledOraclePrice = (order.oraclePrice * 1e18) / 100;
+            uint256 scaledTolerance = (order.tolerance * 1e18) / 10000;
+
+            // Calculate price limit based on oracle price and tolerance
+            uint256 priceLimit = order.zeroForOne
+                ? scaledOraclePrice - scaledTolerance // For sell orders
+                : scaledOraclePrice + scaledTolerance; // For buy orders
+
+            console.log("AfterSwap - Price Comparison for order", i);
+            console.log("Oracle Price (scaled):", scaledOraclePrice);
+            console.log("Price Limit:", priceLimit);
+            console.log("ZeroForOne:", order.zeroForOne);
+
+            // Check if order should be executed
+            bool shouldExecute = (order.zeroForOne && currentPrice <= priceLimit) ||
+                (!order.zeroForOne && currentPrice >= priceLimit);
+
+            if (shouldExecute) {
+                console.log("AfterSwap - Executing order", i);
+                _executeLimitOrder(key, order);
+                order.isActive = false;
+                emit LimitOrderExecuted(poolId, orderOwner, i, order.amount, currentPrice);
+            }
+            i++;
+        }
+        return (this.afterSwap.selector, 0);
+    }
 
     function placeOrder(
         PoolKey calldata key,
