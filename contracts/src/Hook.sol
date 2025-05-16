@@ -6,7 +6,7 @@ import {Hooks} from "v4-core/src/libraries/Hooks.sol";
 import {IPoolManager} from "v4-core/src/interfaces/IPoolManager.sol";
 import {PoolKey} from "v4-core/src/types/PoolKey.sol";
 import {PoolId, PoolIdLibrary} from "v4-core/src/types/PoolId.sol";
-import {BalanceDelta} from "v4-core/src/types/BalanceDelta.sol";
+import {BalanceDelta, toBalanceDelta} from "v4-core/src/types/BalanceDelta.sol";
 import {BeforeSwapDelta, BeforeSwapDeltaLibrary} from "v4-core/src/types/BeforeSwapDelta.sol";
 import {Currency, CurrencyLibrary} from "v4-core/src/types/Currency.sol";
 import {TickMath} from "v4-core/src/libraries/TickMath.sol";
@@ -24,6 +24,7 @@ contract NewEraHook is BaseHook {
     event LimitOrderPlaced(
         PoolId poolId,
         address user,
+        uint256 orderId,
         uint256 amount,
         uint256 oraclePrice,
         uint256 tolerance
@@ -31,10 +32,11 @@ contract NewEraHook is BaseHook {
     event LimitOrderExecuted(
         PoolId poolId,
         address user,
+        uint256 orderId,
         uint256 amount,
         uint256 executionPrice
     );
-    event LimitOrderCancelled(PoolId poolId, address user, uint256 amount);
+    event LimitOrderCancelled(PoolId poolId, address user, uint256 orderId, uint256 amount);
 
     // Structs
     struct LimitOrder {
@@ -49,7 +51,8 @@ contract NewEraHook is BaseHook {
     }
 
     // Storage
-    mapping(PoolId => mapping(address => LimitOrder)) public limitOrders;
+    mapping(PoolId => mapping(address => mapping(uint256 => LimitOrder))) public limitOrders;
+    mapping(PoolId => mapping(address => uint256)) public userOrderCount;
     IPriceOracle public immutable priceOracle;
     mapping(PoolId => TWAMMHelper.State) internal twammStates;
     mapping(PoolId => address) public poolAddresses;
@@ -61,6 +64,10 @@ contract NewEraHook is BaseHook {
     error InvalidAmount();
     error PriceAboveLimit();
     error LimitOrderConditionsNotMet();
+    error TooManyOrders();
+
+    // Constants
+    uint256 constant MAX_ORDERS_PER_USER = 5;
 
     constructor(
         IPoolManager _poolManager,
@@ -118,9 +125,10 @@ contract NewEraHook is BaseHook {
         IPoolManager.SwapParams calldata params,
         bytes calldata hookData
     ) internal override returns (bytes4, BeforeSwapDelta, uint24) {
-       
+        console.log("_beforeSwap called with sender:", sender);
 
         if (sender == address(this)) {
+            console.log("Sender is hook contract, skipping");
             return (
                 this.beforeSwap.selector,
                 BeforeSwapDeltaLibrary.ZERO_DELTA,
@@ -130,19 +138,77 @@ contract NewEraHook is BaseHook {
 
         // Decode the order owner's address from hookData
         address orderOwner = abi.decode(hookData, (address));
+        console.log("Order owner from hookData:", orderOwner);
 
         PoolId poolId = key.toId();
+        uint256 orderCount = userOrderCount[poolId][orderOwner];
 
-        // Check for orders under the order owner's address
-        LimitOrder storage order = limitOrders[poolId][orderOwner];
-        if (!order.isActive) {
-            return (
-                this.beforeSwap.selector,
-                BeforeSwapDeltaLibrary.ZERO_DELTA,
-                0
-            );
+        // Check all active orders for this user
+        uint256 i = 0;
+        while (i < orderCount) {
+            LimitOrder storage order = limitOrders[poolId][orderOwner][i];
+            if (!order.isActive) {
+                i++;
+                continue;
+            }
+
+            // Get current price from swap parameters
+            uint160 sqrtPriceX96 = params.sqrtPriceLimitX96;
+            uint256 currentPrice = (uint256(sqrtPriceX96) *
+                uint256(sqrtPriceX96) *
+                1e18) >> 192;
+
+            // Scale oracle price to match pool price scale (1e18)
+            uint256 scaledOraclePrice = (order.oraclePrice * 1e18) / 100; // Convert from 100 to 1.00
+            uint256 scaledTolerance = (order.tolerance * 1e18) / 10000; // Convert basis points to percentage
+            console.log("scaledOraclePrice", scaledOraclePrice);
+            console.log("scaledTolerance", scaledTolerance);
+
+            // Calculate price limit based on oracle price and tolerance
+            uint256 priceLimit = order.zeroForOne
+                ? scaledOraclePrice - scaledTolerance // For sell orders
+                : scaledOraclePrice + scaledTolerance; // For buy orders
+
+            console.log("Price Comparison:");
+            console.log("Current Price:", currentPrice);
+            console.log("Oracle Price (scaled):", scaledOraclePrice);
+            console.log("Price Limit:", priceLimit);
+            console.log("ZeroForOne:", order.zeroForOne);
+            console.log("Tolerance (scaled):", scaledTolerance);
+
+            // For buy orders (zeroForOne: false), execute when price goes up
+            // For sell orders (zeroForOne: true), execute when price goes down
+            bool shouldExecute = (order.zeroForOne && currentPrice <= priceLimit) ||
+                (!order.zeroForOne && currentPrice >= priceLimit);
+            
+            console.log("Should execute order:", shouldExecute);
+            console.log("Current price vs limit:", currentPrice >= priceLimit ? "above" : "below");
+
+            if (shouldExecute) {
+                _executeLimitOrder(key, order);
+                // Set isActive to false after execution
+                order.isActive = false;
+                emit LimitOrderExecuted(poolId, orderOwner, i, order.amount, currentPrice);
+            }
+            i++;
         }
 
+        return (this.beforeSwap.selector, BeforeSwapDeltaLibrary.ZERO_DELTA, 0);
+    }
+
+    function _afterSwap(
+        address sender,
+        PoolKey calldata key,
+        IPoolManager.SwapParams calldata params,
+        BalanceDelta,
+        bytes calldata hookData
+    ) internal override returns (bytes4, int128) {
+        // Decode the order owner's address from hookData
+        address orderOwner = abi.decode(hookData, (address));
+        console.log("AfterSwap - Order owner from hookData:", orderOwner);
+
+        PoolId poolId = key.toId();
+        uint256 orderCount = userOrderCount[poolId][orderOwner];
 
         // Get current price from swap parameters
         uint160 sqrtPriceX96 = params.sqrtPriceLimitX96;
@@ -150,44 +216,45 @@ contract NewEraHook is BaseHook {
             uint256(sqrtPriceX96) *
             1e18) >> 192;
 
-        // Scale oracle price to match pool price scale (1e18)
-        uint256 scaledOraclePrice = (order.oraclePrice * 1e18) / 100; // Convert from 100 to 1.00
-        uint256 scaledTolerance = (order.tolerance * 1e18) / 10000; // Convert basis points to percentage
-        console.log("scaledOraclePrice", scaledOraclePrice);
-        console.log("scaledTolerance", scaledTolerance);
+        console.log("AfterSwap - Current Price:", currentPrice);
 
-        // Calculate price limit based on oracle price and tolerance
-        uint256 priceLimit = order.zeroForOne
-            ? scaledOraclePrice - scaledTolerance // For sell orders
-            : scaledOraclePrice + scaledTolerance; // For buy orders
+        // Check all active orders for this user
+        uint256 i = 0;
+        while (i < orderCount) {
+            LimitOrder storage order = limitOrders[poolId][orderOwner][i];
+            if (!order.isActive) {
+                i++;
+                continue;
+            }
 
-        // For buy orders (zeroForOne: false), execute when price goes up
-        // For sell orders (zeroForOne: true), execute when price goes down
-        bool shouldExecute = (order.zeroForOne && currentPrice <= priceLimit) ||
-            (!order.zeroForOne && currentPrice >= priceLimit);
-        
+            // Scale oracle price to match pool price scale (1e18)
+            uint256 scaledOraclePrice = (order.oraclePrice * 1e18) / 100;
+            uint256 scaledTolerance = (order.tolerance * 1e18) / 10000;
 
-        if (shouldExecute) {
-            _executeLimitOrder(key, order);
-            // Set isActive to false after execution
-            order.isActive = false;
-        } else {
-            revert LimitOrderConditionsNotMet();
+            // Calculate price limit based on oracle price and tolerance
+            uint256 priceLimit = order.zeroForOne
+                ? scaledOraclePrice - scaledTolerance // For sell orders
+                : scaledOraclePrice + scaledTolerance; // For buy orders
+
+            console.log("AfterSwap - Price Comparison for order", i);
+            console.log("Oracle Price (scaled):", scaledOraclePrice);
+            console.log("Price Limit:", priceLimit);
+            console.log("ZeroForOne:", order.zeroForOne);
+
+            // Check if order should be executed
+            bool shouldExecute = (order.zeroForOne && currentPrice <= priceLimit) ||
+                (!order.zeroForOne && currentPrice >= priceLimit);
+
+            if (shouldExecute) {
+                console.log("AfterSwap - Executing order", i);
+                _executeLimitOrder(key, order);
+                order.isActive = false;
+                emit LimitOrderExecuted(poolId, orderOwner, i, order.amount, currentPrice);
+            }
+            i++;
         }
-
-        return (this.beforeSwap.selector, BeforeSwapDeltaLibrary.ZERO_DELTA, 0);
+        return (this.afterSwap.selector, 0);
     }
-
-
-    // function _afterSwap(
-    //     address sender,
-    //     PoolKey calldata key,
-    //     IPoolManager.SwapParams calldata params,
-    //     BalanceDelta delta,
-    //     bytes calldata hookData
-    // ) internal override {   
-
-    // }
 
     function placeOrder(
         PoolKey calldata key,
@@ -199,28 +266,28 @@ contract NewEraHook is BaseHook {
         if (baseAmount == 0) revert InvalidAmount();
         if (tolerance > 10_000) revert InvalidTolerance();
 
+        PoolId poolId = key.toId();
+        
+        // Check if user has reached maximum orders
+        if (userOrderCount[poolId][msg.sender] >= MAX_ORDERS_PER_USER) {
+            revert TooManyOrders();
+        }
+
         // Get oracle price
         uint256 oraclePrice = priceOracle.getLatestPrice(
             ERC20(Currency.unwrap(key.currency1)).name()
         );
 
-        // check if user already has an active limit order for this pool
-        LimitOrder storage existingOrder = limitOrders[key.toId()][msg.sender];
-
-        if (existingOrder.isActive) {
-            revert("Active limit order already exists");
-        }
-        
-
         // Transfer tokens from user to hook contract
         Currency token = zeroForOne ? key.currency0 : key.currency1;
         ERC20 tokenContract = ERC20(Currency.unwrap(token));
 
-
         // Transfer the total amount (including fees) from user to hook
         tokenContract.transferFrom(msg.sender, address(this), totalAmount);
 
-        limitOrders[key.toId()][msg.sender] = LimitOrder({
+        uint256 orderId = userOrderCount[poolId][msg.sender];
+
+        limitOrders[poolId][msg.sender][orderId] = LimitOrder({
             user: msg.sender,
             amount: baseAmount, // Store original amount without fees
             totalAmount: totalAmount, // Store total amount including fees
@@ -231,9 +298,13 @@ contract NewEraHook is BaseHook {
             tokensTransferred: true // Set to true since we've already transferred tokens
         });
 
+        // Increment order count for this user
+        userOrderCount[poolId][msg.sender]++;
+
         emit LimitOrderPlaced(
-            key.toId(),
+            poolId,
             msg.sender,
+            orderId,
             baseAmount,
             oraclePrice,
             tolerance
@@ -281,7 +352,7 @@ contract NewEraHook is BaseHook {
             }
         }
 
-        emit LimitOrderExecuted(key.toId(), order.user, order.amount, 0);
+        emit LimitOrderExecuted(key.toId(), order.user, 0, order.amount, 0);
     }
 
     function updateLimitOrder(
@@ -290,7 +361,7 @@ contract NewEraHook is BaseHook {
         uint256 newTolerance
     ) external {
         PoolId poolId = key.toId();
-        LimitOrder storage order = limitOrders[poolId][msg.sender];
+        LimitOrder storage order = limitOrders[poolId][msg.sender][0];
 
         if (!order.isActive) revert NoActiveLimitOrder();
         if (order.user != msg.sender) revert UnauthorizedCaller();
@@ -304,15 +375,16 @@ contract NewEraHook is BaseHook {
         emit LimitOrderPlaced(
             poolId,
             msg.sender,
+            0,
             newAmount,
             order.oraclePrice,
             newTolerance
         );
     }
 
-    function cancelLimitOrder(PoolKey calldata key) external {
+    function cancelLimitOrder(PoolKey calldata key, uint256 orderId) external {
         PoolId poolId = key.toId();
-        LimitOrder storage order = limitOrders[poolId][msg.sender];
+        LimitOrder storage order = limitOrders[poolId][msg.sender][orderId];
 
         if (!order.isActive) revert NoActiveLimitOrder();
         if (order.user != msg.sender) revert UnauthorizedCaller();
@@ -320,13 +392,13 @@ contract NewEraHook is BaseHook {
         // Return tokens to user if they were transferred
         if (order.tokensTransferred) {
             Currency token = order.zeroForOne ? key.currency0 : key.currency1;
-            token.transfer(msg.sender, order.amount);
+            token.transfer(msg.sender, order.totalAmount);
         }
 
         // Clear the order
-        delete limitOrders[poolId][msg.sender];
+        delete limitOrders[poolId][msg.sender][orderId];
 
-        emit LimitOrderCancelled(poolId, msg.sender, order.amount);
+        emit LimitOrderCancelled(poolId, msg.sender, orderId, order.amount);
     }
 
     function _settle(Currency currency, uint128 amount) internal {
