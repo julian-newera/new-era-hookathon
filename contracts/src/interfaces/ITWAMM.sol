@@ -48,9 +48,11 @@ interface ITWAMM {
     /// @notice Information associated with a long term order
     /// @member sellRate Amount of tokens sold per interval
     /// @member earningsFactorLast The accrued earnings factor from which to start claiming owed earnings for this order
+    /// @member tolerance The tolerance for price deviation
     struct Order {
         uint256 sellRate;
         uint256 earningsFactorLast;
+        uint256 tolerance;
     }
 
     /// @notice Information that identifies an order
@@ -70,13 +72,15 @@ interface ITWAMM {
     /// @param zeroForOne Whether the order is selling token 0 for token 1
     /// @param sellRate The sell rate of tokens per second being sold in the order
     /// @param earningsFactorLast The current earningsFactor of the order pool
+    /// @param tolerance The tolerance for price deviation in basis points (e.g., 100 = 1%)
     event SubmitOrder(
         PoolId poolId,
         address indexed owner,
         uint256 indexed expiration,
         bool zeroForOne,
         uint256 sellRate,
-        uint256 earningsFactorLast
+        uint256 earningsFactorLast,
+        uint256 tolerance
     );
 
     /// @notice Emitted when a long term order is updated
@@ -86,44 +90,57 @@ interface ITWAMM {
     /// @param zeroForOne Whether the order is selling token 0 for token 1
     /// @param sellRate The updated sellRate of tokens per second being sold in the order
     /// @param earningsFactorLast The current earningsFactor of the order pool
-    ///   (since updated orders will claim existing earnings)
+    /// @param tolerance The updated tolerance for price deviation in basis points
     event UpdateOrder(
         PoolId poolId,
         address indexed owner,
         uint256 indexed expiration,
         bool zeroForOne,
         uint256 sellRate,
-        uint256 earningsFactorLast
+        uint256 earningsFactorLast,
+        uint256 tolerance
     );
 
-    /// @notice Time interval on which orders are allowed to expire. Conserves processing needed on execute.
-    function expirationInterval() external view returns (uint256);
 
     /// @notice Submits a new long term order into the TWAMM. Also executes TWAMM orders if not up to date.
     /// @param key The PoolKey for which to identify the amm pool of the order
     /// @param orderKey The OrderKey for the new order
     /// @param amountIn The amount of sell token to add to the order. Some precision on amountIn may be lost up to the
     /// magnitude of (orderKey.expiration - block.timestamp)
+    /// @param expirationInterval The interval for the order's expiration
+    /// @param tolerance The tolerance for price deviation in basis points (e.g., 100 = 1%)
     /// @return orderId The bytes32 ID of the order
-    function submitOrder(PoolKey calldata key, OrderKey memory orderKey, uint256 amountIn)
-        external
-        returns (bytes32 orderId);
+    function submitTWAMMOrder(
+        PoolKey calldata key,
+        OrderKey memory orderKey,
+        uint256 amountIn,
+        uint256 expirationInterval,
+        uint256 tolerance
+    ) external returns (bytes32 orderId);
 
     /// @notice Update an existing long term order with current earnings, optionally modify the amount selling.
     /// @param key The PoolKey for which to identify the amm pool of the order
     /// @param orderKey The OrderKey for which to identify the order
     /// @param amountDelta The delta for the order sell amount. Negative to remove from order, positive to add, or
     ///    -1 to remove full amount from order.
-    function updateOrder(PoolKey memory key, OrderKey memory orderKey, int256 amountDelta)
-        external
-        returns (uint256 tokens0Owed, uint256 tokens1Owed);
+    /// @param newExpiration The new expiration timestamp for the order. Set to 0 to keep current expiration.
+    /// @param expirationInterval The interval for the order's expiration
+    /// @param newTolerance The new tolerance for price deviation in basis points. Set to 0 to keep current tolerance.
+    function updateTWAMMOrder(
+        PoolKey memory key, 
+        OrderKey memory orderKey, 
+        int256 amountDelta,
+        uint256 newExpiration,
+        uint256 expirationInterval,
+        uint256 newTolerance
+    ) external returns (uint256 tokens0Owed, uint256 tokens1Owed);
 
     /// @notice Claim tokens owed from TWAMM contract
     /// @param token The token to claim
     /// @param to The receipient of the claim
     /// @param amountRequested The amount of tokens requested to claim. Set to 0 to claim all.
     /// @return amountTransferred The total token amount to be collected
-    function claimTokens(Currency token, address to, uint256 amountRequested)
+    function claimTWAMMTokens(Currency token, address to, uint256 amountRequested)
         external
         returns (uint256 amountTransferred);
 
@@ -134,5 +151,5 @@ interface ITWAMM {
 
     function tokensOwed(Currency token, address owner) external returns (uint256);
 
-    function getOrder(PoolKey calldata key, OrderKey calldata orderKey) external view returns (Order memory);
+    function getTWAMMOrder(PoolKey calldata key, OrderKey calldata orderKey) external view returns (Order memory);
 }
