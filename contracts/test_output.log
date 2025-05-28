@@ -1,0 +1,1554 @@
+No files changed, compilation skipped
+
+Ran 8 tests for test/PriceOracle.t.sol:PriceOracleTest
+[PASS] test_Constructor() (gas: 12750)
+Traces:
+  [12750] PriceOracleTest::test_Constructor()
+    ├─ [2265] PriceOracle::owner() [staticcall]
+    │   └─ ← [Return] owner: [0x7c8999dC9a822c1f0Df42023113EDB4FDd543266]
+    ├─ [0] VM::assertEq(owner: [0x7c8999dC9a822c1f0Df42023113EDB4FDd543266], owner: [0x7c8999dC9a822c1f0Df42023113EDB4FDd543266]) [staticcall]
+    │   └─ ← [Return]
+    └─ ← [Return]
+
+[PASS] test_GetLatestPrice() (gas: 64849)
+Traces:
+  [64849] PriceOracleTest::test_GetLatestPrice()
+    ├─ [0] VM::startPrank(owner: [0x7c8999dC9a822c1f0Df42023113EDB4FDd543266])
+    │   └─ ← [Return]
+    ├─ [50175] PriceOracle::updatePrices(["BTC"], [50000 [5e4]])
+    │   ├─ emit PriceUpdated(asset: 0xe98e2830be1a7e4156d656a7505e65d08c67660dc618072422e9c78053c261e9, newPrice: 50000 [5e4])
+    │   └─ ← [Stop]
+    ├─ [0] VM::stopPrank()
+    │   └─ ← [Return]
+    ├─ [1250] PriceOracle::getLatestPrice("BTC") [staticcall]
+    │   └─ ← [Return] 50000 [5e4]
+    ├─ [0] VM::assertEq(50000 [5e4], 50000 [5e4]) [staticcall]
+    │   └─ ← [Return]
+    └─ ← [Return]
+
+[PASS] test_GetLatestPrice_NoData() (gas: 11611)
+Traces:
+  [11611] PriceOracleTest::test_GetLatestPrice_NoData()
+    ├─ [0] VM::expectRevert(custom error 0xf28dceb3:  No price data available)
+    │   └─ ← [Return]
+    ├─ [2846] PriceOracle::getLatestPrice("BTC") [staticcall]
+    │   └─ ← [Revert] revert: No price data available
+    └─ ← [Return]
+
+[PASS] test_PriceHistory_Updates() (gas: 92338)
+Traces:
+  [92338] PriceOracleTest::test_PriceHistory_Updates()
+    ├─ [0] VM::startPrank(owner: [0x7c8999dC9a822c1f0Df42023113EDB4FDd543266])
+    │   └─ ← [Return]
+    ├─ [50175] PriceOracle::updatePrices(["BTC"], [50000 [5e4]])
+    │   ├─ emit PriceUpdated(asset: 0xe98e2830be1a7e4156d656a7505e65d08c67660dc618072422e9c78053c261e9, newPrice: 50000 [5e4])
+    │   └─ ← [Stop]
+    ├─ [26275] PriceOracle::updatePrices(["BTC"], [51000 [5.1e4]])
+    │   ├─ emit PriceUpdated(asset: 0xe98e2830be1a7e4156d656a7505e65d08c67660dc618072422e9c78053c261e9, newPrice: 51000 [5.1e4])
+    │   └─ ← [Stop]
+    ├─ [0] VM::stopPrank()
+    │   └─ ← [Return]
+    ├─ [1250] PriceOracle::getLatestPrice("BTC") [staticcall]
+    │   └─ ← [Return] 51000 [5.1e4]
+    ├─ [0] VM::assertEq(51000 [5.1e4], 51000 [5.1e4]) [staticcall]
+    │   └─ ← [Return]
+    └─ ← [Return]
+
+[PASS] test_UpdatePrices_ArrayLengthMismatch() (gas: 17633)
+Traces:
+  [17633] PriceOracleTest::test_UpdatePrices_ArrayLengthMismatch()
+    ├─ [0] VM::startPrank(owner: [0x7c8999dC9a822c1f0Df42023113EDB4FDd543266])
+    │   └─ ← [Return]
+    ├─ [0] VM::expectRevert(custom error 0xf28dceb3:  'Assets and prices array length mismatch)
+    │   └─ ← [Return]
+    ├─ [4059] PriceOracle::updatePrices(["BTC", "ETH"], [50000 [5e4]])
+    │   └─ ← [Revert] revert: Assets and prices array length mismatch
+    ├─ [0] VM::stopPrank()
+    │   └─ ← [Return]
+    └─ ← [Return]
+
+[PASS] test_UpdatePrices_OnlyOwner() (gas: 16597)
+Traces:
+  [16597] PriceOracleTest::test_UpdatePrices_OnlyOwner()
+    ├─ [0] VM::startPrank(user: [0x6CA6d1e2D5347Bfab1d91e883F1915560e09129D])
+    │   └─ ← [Return]
+    ├─ [0] VM::expectRevert(custom error 0xf28dceb3:  Only owner can update prices)
+    │   └─ ← [Return]
+    ├─ [3588] PriceOracle::updatePrices(["BTC"], [50000 [5e4]])
+    │   └─ ← [Revert] revert: Only owner can update prices
+    ├─ [0] VM::stopPrank()
+    │   └─ ← [Return]
+    └─ ← [Return]
+
+[PASS] test_UpdatePrices_Success() (gas: 115029)
+Traces:
+  [115029] PriceOracleTest::test_UpdatePrices_Success()
+    ├─ [0] VM::startPrank(owner: [0x7c8999dC9a822c1f0Df42023113EDB4FDd543266])
+    │   └─ ← [Return]
+    ├─ [97268] PriceOracle::updatePrices(["BTC", "ETH"], [50000 [5e4], 3000])
+    │   ├─ emit PriceUpdated(asset: 0xe98e2830be1a7e4156d656a7505e65d08c67660dc618072422e9c78053c261e9, newPrice: 50000 [5e4])
+    │   ├─ emit PriceUpdated(asset: 0xaaaebeba3810b1e6b70781f14b2d72c1cb89c0b2b320c43bb67ff79f562f5ff4, newPrice: 3000)
+    │   └─ ← [Stop]
+    ├─ [0] VM::stopPrank()
+    │   └─ ← [Return]
+    ├─ [1250] PriceOracle::getLatestPrice("BTC") [staticcall]
+    │   └─ ← [Return] 50000 [5e4]
+    ├─ [0] VM::assertEq(50000 [5e4], 50000 [5e4]) [staticcall]
+    │   └─ ← [Return]
+    ├─ [1250] PriceOracle::getLatestPrice("ETH") [staticcall]
+    │   └─ ← [Return] 3000
+    ├─ [0] VM::assertEq(3000, 3000) [staticcall]
+    │   └─ ← [Return]
+    └─ ← [Return]
+
+[PASS] test_UpdatePrices_ZeroPrice() (gas: 16644)
+Traces:
+  [16644] PriceOracleTest::test_UpdatePrices_ZeroPrice()
+    ├─ [0] VM::startPrank(owner: [0x7c8999dC9a822c1f0Df42023113EDB4FDd543266])
+    │   └─ ← [Return]
+    ├─ [0] VM::expectRevert(custom error 0xf28dceb3:  Price must be greater than 0)
+    │   └─ ← [Return]
+    ├─ [3745] PriceOracle::updatePrices(["BTC"], [0])
+    │   └─ ← [Revert] revert: Price must be greater than 0
+    ├─ [0] VM::stopPrank()
+    │   └─ ← [Return]
+    └─ ← [Return]
+
+Suite result: ok. 8 passed; 0 failed; 0 skipped; finished in 980.46µs (931.73µs CPU time)
+
+Ran 16 tests for test/HookBasic.t.sol:NewEraHookBasicTest
+[PASS] test_RevertWhen_CancelLimitOrderNotActive() (gas: 264340)
+Traces:
+  [335690] NewEraHookBasicTest::test_RevertWhen_CancelLimitOrderNotActive()
+    ├─ [0] VM::startPrank(0x0000000000000000000000000000000000000123)
+    │   └─ ← [Return]
+    ├─ [906] NewEraHook::calculateOrderAmounts(100, PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 })) [staticcall]
+    │   └─ ← [Return] 100, 105
+    ├─ [29398] MockERC20::mint(0x0000000000000000000000000000000000000123, 105)
+    │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000000, to: 0x0000000000000000000000000000000000000123, value: 105)
+    │   └─ ← [Stop]
+    ├─ [24305] MockERC20::approve(NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], 105)
+    │   ├─ emit Approval(owner: 0x0000000000000000000000000000000000000123, spender: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], value: 105)
+    │   └─ ← [Return] true
+    ├─ [24305] MockERC20::approve(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], 105)
+    │   ├─ emit Approval(owner: 0x0000000000000000000000000000000000000123, spender: PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], value: 105)
+    │   └─ ← [Return] true
+    ├─ [197691] NewEraHook::placeLimitOrder(PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), 100, 105, 100, false)
+    │   ├─ [2766] MockERC20::name() [staticcall]
+    │   │   └─ ← [Return] "TEST"
+    │   ├─ [5250] PriceOracle::getLatestPrice("TEST") [staticcall]
+    │   │   └─ ← [Return] 100
+    │   ├─ [25316] MockERC20::transferFrom(0x0000000000000000000000000000000000000123, NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], 105)
+    │   │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000123, to: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], value: 105)
+    │   │   └─ ← [Return] true
+    │   ├─ emit LimitOrderPlaced(poolId: 0x69b3ee87d25191b43923b3104db503ce56544fbbc8fd0ad0c88faa01b9c73814, user: 0x0000000000000000000000000000000000000123, orderId: 0, amount: 100, oraclePrice: 100, tolerance: 100)
+    │   └─ ← [Stop]
+    ├─ [27669] NewEraHook::cancelLimitOrder(PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), 0x0000000000000000000000000000000000000123, 0)
+    │   ├─ [22811] MockERC20::transfer(0x0000000000000000000000000000000000000123, 105)
+    │   │   ├─ emit Transfer(from: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], to: 0x0000000000000000000000000000000000000123, value: 105)
+    │   │   └─ ← [Return] true
+    │   ├─ emit LimitOrderCancelled(poolId: 0x69b3ee87d25191b43923b3104db503ce56544fbbc8fd0ad0c88faa01b9c73814, user: 0x0000000000000000000000000000000000000123, orderId: 0, amount: 0)
+    │   └─ ← [Stop]
+    ├─ [0] VM::expectRevert(custom error 0xc31eb0e0: c282158d00000000000000000000000000000000000000000000000000000000)
+    │   └─ ← [Return]
+    ├─ [1261] NewEraHook::cancelLimitOrder(PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), 0x0000000000000000000000000000000000000123, 0)
+    │   └─ ← [Revert] NoActiveLimitOrder()
+    ├─ [0] VM::stopPrank()
+    │   └─ ← [Return]
+    └─ ← [Return]
+
+[PASS] test_RevertWhen_CancelLimitOrderUnauthorized() (gas: 307657)
+Traces:
+  [307657] NewEraHookBasicTest::test_RevertWhen_CancelLimitOrderUnauthorized()
+    ├─ [0] VM::startPrank(0x0000000000000000000000000000000000000456)
+    │   └─ ← [Return]
+    ├─ [29398] MockERC20::mint(0x0000000000000000000000000000000000000456, 1000000000000000000000 [1e21])
+    │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000000, to: 0x0000000000000000000000000000000000000456, value: 1000000000000000000000 [1e21])
+    │   └─ ← [Stop]
+    ├─ [24305] MockERC20::approve(NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   ├─ emit Approval(owner: 0x0000000000000000000000000000000000000456, spender: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], value: 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   └─ ← [Return] true
+    ├─ [24305] MockERC20::approve(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   ├─ emit Approval(owner: 0x0000000000000000000000000000000000000456, spender: PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], value: 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   └─ ← [Return] true
+    ├─ [906] NewEraHook::calculateOrderAmounts(100, PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 })) [staticcall]
+    │   └─ ← [Return] 100, 105
+    ├─ [197382] NewEraHook::placeLimitOrder(PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), 100, 105, 100, false)
+    │   ├─ [2766] MockERC20::name() [staticcall]
+    │   │   └─ ← [Return] "TEST"
+    │   ├─ [5250] PriceOracle::getLatestPrice("TEST") [staticcall]
+    │   │   └─ ← [Return] 100
+    │   ├─ [25007] MockERC20::transferFrom(0x0000000000000000000000000000000000000456, NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], 105)
+    │   │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000456, to: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], value: 105)
+    │   │   └─ ← [Return] true
+    │   ├─ emit LimitOrderPlaced(poolId: 0x69b3ee87d25191b43923b3104db503ce56544fbbc8fd0ad0c88faa01b9c73814, user: 0x0000000000000000000000000000000000000456, orderId: 0, amount: 100, oraclePrice: 100, tolerance: 100)
+    │   └─ ← [Stop]
+    ├─ [1353] NewEraHook::limitOrders(0x69b3ee87d25191b43923b3104db503ce56544fbbc8fd0ad0c88faa01b9c73814, 0x0000000000000000000000000000000000000456, 0) [staticcall]
+    │   └─ ← [Return] 0x0000000000000000000000000000000000000456, 100, 105, 100, 100, false, true, true
+    ├─ [0] VM::stopPrank()
+    │   └─ ← [Return]
+    ├─ [0] VM::prank(0x0000000000000000000000000000000000000789)
+    │   └─ ← [Return]
+    ├─ [0] VM::expectRevert(custom error 0xc31eb0e0: 5c427cd900000000000000000000000000000000000000000000000000000000)
+    │   └─ ← [Return]
+    ├─ [1279] NewEraHook::cancelLimitOrder(PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), 0x0000000000000000000000000000000000000456, 0)
+    │   └─ ← [Revert] UnauthorizedCaller()
+    └─ ← [Return]
+
+[PASS] test_RevertWhen_UpdateLimitOrderInvalidTolerance() (gas: 267381)
+Traces:
+  [307181] NewEraHookBasicTest::test_RevertWhen_UpdateLimitOrderInvalidTolerance()
+    ├─ [0] VM::startPrank(0x0000000000000000000000000000000000000123)
+    │   └─ ← [Return]
+    ├─ [906] NewEraHook::calculateOrderAmounts(100, PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 })) [staticcall]
+    │   └─ ← [Return] 100, 105
+    ├─ [29398] MockERC20::mint(0x0000000000000000000000000000000000000123, 105)
+    │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000000, to: 0x0000000000000000000000000000000000000123, value: 105)
+    │   └─ ← [Stop]
+    ├─ [24305] MockERC20::approve(NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], 105)
+    │   ├─ emit Approval(owner: 0x0000000000000000000000000000000000000123, spender: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], value: 105)
+    │   └─ ← [Return] true
+    ├─ [24305] MockERC20::approve(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], 105)
+    │   ├─ emit Approval(owner: 0x0000000000000000000000000000000000000123, spender: PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], value: 105)
+    │   └─ ← [Return] true
+    ├─ [197691] NewEraHook::placeLimitOrder(PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), 100, 105, 100, false)
+    │   ├─ [2766] MockERC20::name() [staticcall]
+    │   │   └─ ← [Return] "TEST"
+    │   ├─ [5250] PriceOracle::getLatestPrice("TEST") [staticcall]
+    │   │   └─ ← [Return] 100
+    │   ├─ [25316] MockERC20::transferFrom(0x0000000000000000000000000000000000000123, NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], 105)
+    │   │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000123, to: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], value: 105)
+    │   │   └─ ← [Return] true
+    │   ├─ emit LimitOrderPlaced(poolId: 0x69b3ee87d25191b43923b3104db503ce56544fbbc8fd0ad0c88faa01b9c73814, user: 0x0000000000000000000000000000000000000123, orderId: 0, amount: 100, oraclePrice: 100, tolerance: 100)
+    │   └─ ← [Stop]
+    ├─ [0] VM::expectRevert(custom error 0xc31eb0e0: b355cf2600000000000000000000000000000000000000000000000000000000)
+    │   └─ ← [Return]
+    ├─ [1494] NewEraHook::updateLimitOrder(PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), 0x0000000000000000000000000000000000000123, 0, 200, 10001 [1e4])
+    │   └─ ← [Revert] InvalidTolerance()
+    ├─ [0] VM::stopPrank()
+    │   └─ ← [Return]
+    └─ ← [Return]
+
+[PASS] test_RevertWhen_UpdateLimitOrderUnauthorized() (gas: 307925)
+Traces:
+  [307925] NewEraHookBasicTest::test_RevertWhen_UpdateLimitOrderUnauthorized()
+    ├─ [0] VM::startPrank(0x0000000000000000000000000000000000000456)
+    │   └─ ← [Return]
+    ├─ [29398] MockERC20::mint(0x0000000000000000000000000000000000000456, 1000000000000000000000 [1e21])
+    │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000000, to: 0x0000000000000000000000000000000000000456, value: 1000000000000000000000 [1e21])
+    │   └─ ← [Stop]
+    ├─ [24305] MockERC20::approve(NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   ├─ emit Approval(owner: 0x0000000000000000000000000000000000000456, spender: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], value: 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   └─ ← [Return] true
+    ├─ [24305] MockERC20::approve(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   ├─ emit Approval(owner: 0x0000000000000000000000000000000000000456, spender: PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], value: 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   └─ ← [Return] true
+    ├─ [906] NewEraHook::calculateOrderAmounts(100, PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 })) [staticcall]
+    │   └─ ← [Return] 100, 105
+    ├─ [197382] NewEraHook::placeLimitOrder(PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), 100, 105, 100, false)
+    │   ├─ [2766] MockERC20::name() [staticcall]
+    │   │   └─ ← [Return] "TEST"
+    │   ├─ [5250] PriceOracle::getLatestPrice("TEST") [staticcall]
+    │   │   └─ ← [Return] 100
+    │   ├─ [25007] MockERC20::transferFrom(0x0000000000000000000000000000000000000456, NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], 105)
+    │   │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000456, to: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], value: 105)
+    │   │   └─ ← [Return] true
+    │   ├─ emit LimitOrderPlaced(poolId: 0x69b3ee87d25191b43923b3104db503ce56544fbbc8fd0ad0c88faa01b9c73814, user: 0x0000000000000000000000000000000000000456, orderId: 0, amount: 100, oraclePrice: 100, tolerance: 100)
+    │   └─ ← [Stop]
+    ├─ [1353] NewEraHook::limitOrders(0x69b3ee87d25191b43923b3104db503ce56544fbbc8fd0ad0c88faa01b9c73814, 0x0000000000000000000000000000000000000456, 0) [staticcall]
+    │   └─ ← [Return] 0x0000000000000000000000000000000000000456, 100, 105, 100, 100, false, true, true
+    ├─ [0] VM::stopPrank()
+    │   └─ ← [Return]
+    ├─ [0] VM::prank(0x0000000000000000000000000000000000000789)
+    │   └─ ← [Return]
+    ├─ [0] VM::expectRevert(custom error 0xc31eb0e0: 5c427cd900000000000000000000000000000000000000000000000000000000)
+    │   └─ ← [Return]
+    ├─ [1335] NewEraHook::updateLimitOrder(PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), 0x0000000000000000000000000000000000000456, 0, 200, 200)
+    │   └─ ← [Revert] UnauthorizedCaller()
+    └─ ← [Return]
+
+[PASS] test_RevertWhen_UpdateLimitOrderZeroAmount() (gas: 267620)
+Traces:
+  [307420] NewEraHookBasicTest::test_RevertWhen_UpdateLimitOrderZeroAmount()
+    ├─ [0] VM::startPrank(0x0000000000000000000000000000000000000123)
+    │   └─ ← [Return]
+    ├─ [906] NewEraHook::calculateOrderAmounts(100, PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 })) [staticcall]
+    │   └─ ← [Return] 100, 105
+    ├─ [29398] MockERC20::mint(0x0000000000000000000000000000000000000123, 105)
+    │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000000, to: 0x0000000000000000000000000000000000000123, value: 105)
+    │   └─ ← [Stop]
+    ├─ [24305] MockERC20::approve(NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], 105)
+    │   ├─ emit Approval(owner: 0x0000000000000000000000000000000000000123, spender: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], value: 105)
+    │   └─ ← [Return] true
+    ├─ [24305] MockERC20::approve(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], 105)
+    │   ├─ emit Approval(owner: 0x0000000000000000000000000000000000000123, spender: PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], value: 105)
+    │   └─ ← [Return] true
+    ├─ [197691] NewEraHook::placeLimitOrder(PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), 100, 105, 100, false)
+    │   ├─ [2766] MockERC20::name() [staticcall]
+    │   │   └─ ← [Return] "TEST"
+    │   ├─ [5250] PriceOracle::getLatestPrice("TEST") [staticcall]
+    │   │   └─ ← [Return] 100
+    │   ├─ [25316] MockERC20::transferFrom(0x0000000000000000000000000000000000000123, NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], 105)
+    │   │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000123, to: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], value: 105)
+    │   │   └─ ← [Return] true
+    │   ├─ emit LimitOrderPlaced(poolId: 0x69b3ee87d25191b43923b3104db503ce56544fbbc8fd0ad0c88faa01b9c73814, user: 0x0000000000000000000000000000000000000123, orderId: 0, amount: 100, oraclePrice: 100, tolerance: 100)
+    │   └─ ← [Stop]
+    ├─ [0] VM::expectRevert(custom error 0xc31eb0e0: 2c5211c600000000000000000000000000000000000000000000000000000000)
+    │   └─ ← [Return]
+    ├─ [1513] NewEraHook::updateLimitOrder(PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), 0x0000000000000000000000000000000000000123, 0, 0, 200)
+    │   └─ ← [Revert] InvalidAmount()
+    ├─ [0] VM::stopPrank()
+    │   └─ ← [Return]
+    └─ ← [Return]
+
+[PASS] test_RevertWhen_WithdrawFundsUnauthorized() (gas: 266402)
+Traces:
+  [306202] NewEraHookBasicTest::test_RevertWhen_WithdrawFundsUnauthorized()
+    ├─ [0] VM::startPrank(0x0000000000000000000000000000000000000123)
+    │   └─ ← [Return]
+    ├─ [906] NewEraHook::calculateOrderAmounts(100, PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 })) [staticcall]
+    │   └─ ← [Return] 100, 105
+    ├─ [29398] MockERC20::mint(0x0000000000000000000000000000000000000123, 105)
+    │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000000, to: 0x0000000000000000000000000000000000000123, value: 105)
+    │   └─ ← [Stop]
+    ├─ [24305] MockERC20::approve(NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], 105)
+    │   ├─ emit Approval(owner: 0x0000000000000000000000000000000000000123, spender: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], value: 105)
+    │   └─ ← [Return] true
+    ├─ [24305] MockERC20::approve(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], 105)
+    │   ├─ emit Approval(owner: 0x0000000000000000000000000000000000000123, spender: PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], value: 105)
+    │   └─ ← [Return] true
+    ├─ [197691] NewEraHook::placeLimitOrder(PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), 100, 105, 100, false)
+    │   ├─ [2766] MockERC20::name() [staticcall]
+    │   │   └─ ← [Return] "TEST"
+    │   ├─ [5250] PriceOracle::getLatestPrice("TEST") [staticcall]
+    │   │   └─ ← [Return] 100
+    │   ├─ [25316] MockERC20::transferFrom(0x0000000000000000000000000000000000000123, NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], 105)
+    │   │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000123, to: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], value: 105)
+    │   │   └─ ← [Return] true
+    │   ├─ emit LimitOrderPlaced(poolId: 0x69b3ee87d25191b43923b3104db503ce56544fbbc8fd0ad0c88faa01b9c73814, user: 0x0000000000000000000000000000000000000123, orderId: 0, amount: 100, oraclePrice: 100, tolerance: 100)
+    │   └─ ← [Stop]
+    ├─ [0] VM::stopPrank()
+    │   └─ ← [Return]
+    ├─ [0] VM::prank(0x0000000000000000000000000000000000000789)
+    │   └─ ← [Return]
+    ├─ [0] VM::expectRevert(custom error 0xc31eb0e0: GUey)
+    │   └─ ← [Return]
+    ├─ [499] NewEraHook::withdrawFunds(MockERC20: [0x212224D2F2d262cd093eE13240ca4873fcCBbA3C])
+    │   └─ ← [Revert] OnlyAdmin()
+    └─ ← [Return]
+
+[PASS] test_TWAMMOrder() (gas: 320349)
+Logs:
+  === submitTWAMMOrder ===
+  amountIn: 100000000000000000000
+  expirationInterval: 30000
+  tolerance: 100
+  duration: 20000
+  calculated sellRate: 5000000000000000
+  Sender balance before transfer: 100000000000000000000
+  Contract balance before transfer: 0
+  Amount to transfer: 100000000000000000000
+  Allowance: 100000000000000000000
+  Sender balance after transfer: 0
+  Contract balance after transfer: 100000000000000000000
+
+Traces:
+  [360149] NewEraHookBasicTest::test_TWAMMOrder()
+    ├─ [0] VM::startPrank(0x0000000000000000000000000000000000000123)
+    │   └─ ← [Return]
+    ├─ [1264] NewEraHook::createOrderKey(0x0000000000000000000000000000000000000123, 30000 [3e4], true) [staticcall]
+    │   └─ ← [Return] OrderKey({ owner: 0x0000000000000000000000000000000000000123, expiration: 30000 [3e4], zeroForOne: true })
+    ├─ [29398] MockERC20::mint(0x0000000000000000000000000000000000000123, 100000000000000000000 [1e20])
+    │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000000, to: 0x0000000000000000000000000000000000000123, value: 100000000000000000000 [1e20])
+    │   └─ ← [Stop]
+    ├─ [24305] MockERC20::approve(NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], 100000000000000000000 [1e20])
+    │   ├─ emit Approval(owner: 0x0000000000000000000000000000000000000123, spender: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], value: 100000000000000000000 [1e20])
+    │   └─ ← [Return] true
+    ├─ [24305] MockERC20::approve(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], 100000000000000000000 [1e20])
+    │   ├─ emit Approval(owner: 0x0000000000000000000000000000000000000123, spender: PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], value: 100000000000000000000 [1e20])
+    │   └─ ← [Return] true
+    ├─ [8507] NewEraHook::getTWAMMOrder(PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), OrderKey({ owner: 0x0000000000000000000000000000000000000123, expiration: 30000 [3e4], zeroForOne: true })) [staticcall]
+    │   └─ ← [Return] Order({ sellRate: 0, earningsFactorLast: 0, tolerance: 0 })
+    ├─ [0] VM::assertEq(0, 0) [staticcall]
+    │   └─ ← [Return]
+    ├─ [0] VM::assertEq(0, 0) [staticcall]
+    │   └─ ← [Return]
+    ├─ [0] VM::warp(10000 [1e4])
+    │   └─ ← [Return]
+    ├─ [228376] NewEraHook::submitTWAMMOrder(PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), OrderKey({ owner: 0x0000000000000000000000000000000000000123, expiration: 30000 [3e4], zeroForOne: true }), 100000000000000000000 [1e20], 30000 [3e4], 100)
+    │   ├─ [0] console::log("=== submitTWAMMOrder ===") [staticcall]
+    │   │   └─ ← [Stop]
+    │   ├─ [0] console::log("amountIn:", 100000000000000000000 [1e20]) [staticcall]
+    │   │   └─ ← [Stop]
+    │   ├─ [0] console::log("expirationInterval:", 30000 [3e4]) [staticcall]
+    │   │   └─ ← [Stop]
+    │   ├─ [0] console::log("tolerance:", 100) [staticcall]
+    │   │   └─ ← [Stop]
+    │   ├─ [2378] PoolManager::extsload(0x0825676e9b33ad3f7c67c3de6d9923b0d0bdb7557b274a92f9d56f76cf384f2d) [staticcall]
+    │   │   └─ ← [Return] 0x0000000000000000000000000000000000000000000000000000000000000000
+    │   ├─ [2378] PoolManager::extsload(0x4db038090f7a8b626de736d9f85127228dfb547626f5c9f914f7d8ff079d41f6) [staticcall]
+    │   │   └─ ← [Return] 0x0000000000000000000000000000000000000000000000000000000000000000
+    │   ├─ [2766] MockERC20::name() [staticcall]
+    │   │   └─ ← [Return] "TEST"
+    │   ├─ [5250] PriceOracle::getLatestPrice("TEST") [staticcall]
+    │   │   └─ ← [Return] 100
+    │   ├─ [0] console::log("duration:", 20000 [2e4]) [staticcall]
+    │   │   └─ ← [Stop]
+    │   ├─ [0] console::log("calculated sellRate:", 5000000000000000 [5e15]) [staticcall]
+    │   │   └─ ← [Stop]
+    │   ├─ [552] MockERC20::balanceOf(0x0000000000000000000000000000000000000123) [staticcall]
+    │   │   └─ ← [Return] 100000000000000000000 [1e20]
+    │   ├─ [0] console::log("Sender balance before transfer:", 100000000000000000000 [1e20]) [staticcall]
+    │   │   └─ ← [Stop]
+    │   ├─ [2552] MockERC20::balanceOf(NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0]) [staticcall]
+    │   │   └─ ← [Return] 0
+    │   ├─ [0] console::log("Contract balance before transfer:", 0) [staticcall]
+    │   │   └─ ← [Stop]
+    │   ├─ [0] console::log("Amount to transfer:", 100000000000000000000 [1e20]) [staticcall]
+    │   │   └─ ← [Stop]
+    │   ├─ [848] MockERC20::allowance(0x0000000000000000000000000000000000000123, NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0]) [staticcall]
+    │   │   └─ ← [Return] 100000000000000000000 [1e20]
+    │   ├─ [0] console::log("Allowance:", 100000000000000000000 [1e20]) [staticcall]
+    │   │   └─ ← [Stop]
+    │   ├─ [23316] MockERC20::transferFrom(0x0000000000000000000000000000000000000123, NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], 100000000000000000000 [1e20])
+    │   │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000123, to: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], value: 100000000000000000000 [1e20])
+    │   │   └─ ← [Return] true
+    │   ├─ [552] MockERC20::balanceOf(0x0000000000000000000000000000000000000123) [staticcall]
+    │   │   └─ ← [Return] 0
+    │   ├─ [0] console::log("Sender balance after transfer:", 0) [staticcall]
+    │   │   └─ ← [Stop]
+    │   ├─ [552] MockERC20::balanceOf(NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0]) [staticcall]
+    │   │   └─ ← [Return] 100000000000000000000 [1e20]
+    │   ├─ [0] console::log("Contract balance after transfer:", 100000000000000000000 [1e20]) [staticcall]
+    │   │   └─ ← [Stop]
+    │   ├─ emit SubmitOrder(poolId: 0x69b3ee87d25191b43923b3104db503ce56544fbbc8fd0ad0c88faa01b9c73814, owner: 0x0000000000000000000000000000000000000123, expiration: 30000 [3e4], zeroForOne: true, sellRate: 5000000000000000 [5e15], earningsFactorLast: 0, tolerance: 100)
+    │   └─ ← [Return] 0xfd215bc474f46996d892e49c2186ee02f17ff27e1b76741fd74070911740f158
+    ├─ [2507] NewEraHook::getTWAMMOrder(PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), OrderKey({ owner: 0x0000000000000000000000000000000000000123, expiration: 30000 [3e4], zeroForOne: true })) [staticcall]
+    │   └─ ← [Return] Order({ sellRate: 5000000000000000 [5e15], earningsFactorLast: 0, tolerance: 100 })
+    ├─ [1522] NewEraHook::getTWAMMOrderPool(PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), true) [staticcall]
+    │   └─ ← [Return] 5000000000000000 [5e15], 0
+    ├─ [3535] NewEraHook::getTWAMMOrderPool(PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), false) [staticcall]
+    │   └─ ← [Return] 0, 0
+    ├─ [0] VM::assertEq(5000000000000000 [5e15], 5000000000000000 [5e15]) [staticcall]
+    │   └─ ← [Return]
+    ├─ [0] VM::assertEq(0, 0) [staticcall]
+    │   └─ ← [Return]
+    ├─ [0] VM::assertEq(5000000000000000 [5e15], 5000000000000000 [5e15]) [staticcall]
+    │   └─ ← [Return]
+    ├─ [0] VM::assertEq(0, 0) [staticcall]
+    │   └─ ← [Return]
+    ├─ [0] VM::assertEq(0, 0) [staticcall]
+    │   └─ ← [Return]
+    ├─ [0] VM::assertEq(0, 0) [staticcall]
+    │   └─ ← [Return]
+    ├─ [0] VM::stopPrank()
+    │   └─ ← [Return]
+    └─ ← [Return]
+
+[FAIL: panic: arithmetic underflow or overflow (0x11)] test_TWAMMOrderExecutionOverTime() (gas: 258265)
+Traces:
+  [241083514] NewEraHookBasicTest::setUp()
+    ├─ [3457919] → new PoolManager@0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f
+    │   ├─ emit OwnershipTransferred(previousOwner: 0x0000000000000000000000000000000000000000, newOwner: NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496])
+    │   └─ ← [Return] 17151 bytes of code
+    ├─ [1008317] → new PoolSwapTest@0x2e234DAe75C793f67A35089C9d99245E1C58470b
+    │   └─ ← [Return] 5035 bytes of code
+    ├─ [489977] → new SwapRouterNoChecks@0xF62849F9A0B5Bf2913b396098F7c7019b51A820a
+    │   └─ ← [Return] 2446 bytes of code
+    ├─ [907811] → new PoolModifyLiquidityTest@0x5991A2dF15A8F6A256D3Ec51E99254Cd3fb576A9
+    │   └─ ← [Return] 4533 bytes of code
+    ├─ [696381] → new PoolModifyLiquidityTestNoChecks@0xc7183455a4C133Ae270771860664b6B7ec320bB1
+    │   └─ ← [Return] 3477 bytes of code
+    ├─ [679177] → new PoolDonateTest@0xa0Cb889707d426A7A386870A03bc70d1b0697598
+    │   └─ ← [Return] 3391 bytes of code
+    ├─ [568083] → new PoolTakeTest@0x1d1499e622D69689cdf9004d05Ec547d650Ff211
+    │   └─ ← [Return] 2836 bytes of code
+    ├─ [437541] → new PoolClaimsTest@0xA4AD4f68d0b91CFD19687c881e50f3A00242828c
+    │   └─ ← [Return] 2184 bytes of code
+    ├─ [3278912] → new PoolNestedActionsTest@0x03A6a84cD762D9707A21605b548aaaB891562aAb
+    │   ├─ [2171890] → new NestedActionExecutor@0x61a0009C8E5f6e87CAf2D3B57081c27882a0187e
+    │   │   └─ ← [Return] 9496 bytes of code
+    │   └─ ← [Return] 4914 bytes of code
+    ├─ [0] VM::addr(<pk>) [staticcall]
+    │   └─ ← [Return] feeController: [0xb52F5153576Ca8b1d3eD645A8F76809Bd1a62620]
+    ├─ [0] VM::label(feeController: [0xb52F5153576Ca8b1d3eD645A8F76809Bd1a62620], "feeController")
+    │   └─ ← [Return]
+    ├─ [1662004] → new ActionsRouter@0xD6BbDE9174b1CdAa358d2Cf4D57D1a9F7178FBfF
+    │   └─ ← [Return] 8079 bytes of code
+    ├─ [23843] PoolManager::setProtocolFeeController(feeController: [0xb52F5153576Ca8b1d3eD645A8F76809Bd1a62620])
+    │   ├─ emit ProtocolFeeControllerUpdated(protocolFeeController: feeController: [0xb52F5153576Ca8b1d3eD645A8F76809Bd1a62620])
+    │   └─ ← [Stop]
+    ├─ [594578] → new MockERC20@0x15cF58144EF33af1e14b5208015d11F9143E27b9
+    │   └─ ← [Return] 2736 bytes of code
+    ├─ [46498] MockERC20::mint(NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], 57896044618658097711785492504343953926634992332820282019728792003956564819968 [5.789e76])
+    │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000000, to: NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], value: 57896044618658097711785492504343953926634992332820282019728792003956564819968 [5.789e76])
+    │   └─ ← [Stop]
+    ├─ [549] PoolNestedActionsTest::executor() [staticcall]
+    │   └─ ← [Return] NestedActionExecutor: [0x61a0009C8E5f6e87CAf2D3B57081c27882a0187e]
+    ├─ [24305] MockERC20::approve(PoolSwapTest: [0x2e234DAe75C793f67A35089C9d99245E1C58470b], 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   ├─ emit Approval(owner: NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], spender: PoolSwapTest: [0x2e234DAe75C793f67A35089C9d99245E1C58470b], value: 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   └─ ← [Return] true
+    ├─ [24305] MockERC20::approve(SwapRouterNoChecks: [0xF62849F9A0B5Bf2913b396098F7c7019b51A820a], 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   ├─ emit Approval(owner: NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], spender: SwapRouterNoChecks: [0xF62849F9A0B5Bf2913b396098F7c7019b51A820a], value: 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   └─ ← [Return] true
+    ├─ [24305] MockERC20::approve(PoolModifyLiquidityTest: [0x5991A2dF15A8F6A256D3Ec51E99254Cd3fb576A9], 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   ├─ emit Approval(owner: NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], spender: PoolModifyLiquidityTest: [0x5991A2dF15A8F6A256D3Ec51E99254Cd3fb576A9], value: 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   └─ ← [Return] true
+    ├─ [24305] MockERC20::approve(PoolModifyLiquidityTestNoChecks: [0xc7183455a4C133Ae270771860664b6B7ec320bB1], 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   ├─ emit Approval(owner: NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], spender: PoolModifyLiquidityTestNoChecks: [0xc7183455a4C133Ae270771860664b6B7ec320bB1], value: 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   └─ ← [Return] true
+    ├─ [24305] MockERC20::approve(PoolDonateTest: [0xa0Cb889707d426A7A386870A03bc70d1b0697598], 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   ├─ emit Approval(owner: NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], spender: PoolDonateTest: [0xa0Cb889707d426A7A386870A03bc70d1b0697598], value: 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   └─ ← [Return] true
+    ├─ [24305] MockERC20::approve(PoolTakeTest: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   ├─ emit Approval(owner: NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], spender: PoolTakeTest: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], value: 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   └─ ← [Return] true
+    ├─ [24305] MockERC20::approve(PoolClaimsTest: [0xA4AD4f68d0b91CFD19687c881e50f3A00242828c], 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   ├─ emit Approval(owner: NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], spender: PoolClaimsTest: [0xA4AD4f68d0b91CFD19687c881e50f3A00242828c], value: 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   └─ ← [Return] true
+    ├─ [24305] MockERC20::approve(NestedActionExecutor: [0x61a0009C8E5f6e87CAf2D3B57081c27882a0187e], 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   ├─ emit Approval(owner: NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], spender: NestedActionExecutor: [0x61a0009C8E5f6e87CAf2D3B57081c27882a0187e], value: 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   └─ ← [Return] true
+    ├─ [24305] MockERC20::approve(ActionsRouter: [0xD6BbDE9174b1CdAa358d2Cf4D57D1a9F7178FBfF], 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   ├─ emit Approval(owner: NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], spender: ActionsRouter: [0xD6BbDE9174b1CdAa358d2Cf4D57D1a9F7178FBfF], value: 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   └─ ← [Return] true
+    ├─ [594578] → new MockERC20@0x212224D2F2d262cd093eE13240ca4873fcCBbA3C
+    │   └─ ← [Return] 2736 bytes of code
+    ├─ [46498] MockERC20::mint(NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], 57896044618658097711785492504343953926634992332820282019728792003956564819968 [5.789e76])
+    │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000000, to: NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], value: 57896044618658097711785492504343953926634992332820282019728792003956564819968 [5.789e76])
+    │   └─ ← [Stop]
+    ├─ [549] PoolNestedActionsTest::executor() [staticcall]
+    │   └─ ← [Return] NestedActionExecutor: [0x61a0009C8E5f6e87CAf2D3B57081c27882a0187e]
+    ├─ [24305] MockERC20::approve(PoolSwapTest: [0x2e234DAe75C793f67A35089C9d99245E1C58470b], 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   ├─ emit Approval(owner: NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], spender: PoolSwapTest: [0x2e234DAe75C793f67A35089C9d99245E1C58470b], value: 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   └─ ← [Return] true
+    ├─ [24305] MockERC20::approve(SwapRouterNoChecks: [0xF62849F9A0B5Bf2913b396098F7c7019b51A820a], 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   ├─ emit Approval(owner: NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], spender: SwapRouterNoChecks: [0xF62849F9A0B5Bf2913b396098F7c7019b51A820a], value: 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   └─ ← [Return] true
+    ├─ [24305] MockERC20::approve(PoolModifyLiquidityTest: [0x5991A2dF15A8F6A256D3Ec51E99254Cd3fb576A9], 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   ├─ emit Approval(owner: NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], spender: PoolModifyLiquidityTest: [0x5991A2dF15A8F6A256D3Ec51E99254Cd3fb576A9], value: 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   └─ ← [Return] true
+    ├─ [24305] MockERC20::approve(PoolModifyLiquidityTestNoChecks: [0xc7183455a4C133Ae270771860664b6B7ec320bB1], 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   ├─ emit Approval(owner: NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], spender: PoolModifyLiquidityTestNoChecks: [0xc7183455a4C133Ae270771860664b6B7ec320bB1], value: 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   └─ ← [Return] true
+    ├─ [24305] MockERC20::approve(PoolDonateTest: [0xa0Cb889707d426A7A386870A03bc70d1b0697598], 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   ├─ emit Approval(owner: NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], spender: PoolDonateTest: [0xa0Cb889707d426A7A386870A03bc70d1b0697598], value: 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   └─ ← [Return] true
+    ├─ [24305] MockERC20::approve(PoolTakeTest: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   ├─ emit Approval(owner: NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], spender: PoolTakeTest: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], value: 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   └─ ← [Return] true
+    ├─ [24305] MockERC20::approve(PoolClaimsTest: [0xA4AD4f68d0b91CFD19687c881e50f3A00242828c], 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   ├─ emit Approval(owner: NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], spender: PoolClaimsTest: [0xA4AD4f68d0b91CFD19687c881e50f3A00242828c], value: 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   └─ ← [Return] true
+    ├─ [24305] MockERC20::approve(NestedActionExecutor: [0x61a0009C8E5f6e87CAf2D3B57081c27882a0187e], 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   ├─ emit Approval(owner: NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], spender: NestedActionExecutor: [0x61a0009C8E5f6e87CAf2D3B57081c27882a0187e], value: 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   └─ ← [Return] true
+    ├─ [24305] MockERC20::approve(ActionsRouter: [0xD6BbDE9174b1CdAa358d2Cf4D57D1a9F7178FBfF], 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   ├─ emit Approval(owner: NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], spender: ActionsRouter: [0xD6BbDE9174b1CdAa358d2Cf4D57D1a9F7178FBfF], value: 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   └─ ← [Return] true
+    ├─ [315271] → new PriceOracle@0x2a07706473244BC757E10F2a9E86fB532828afe3
+    │   └─ ← [Return] 1464 bytes of code
+    ├─ [48175] PriceOracle::updatePrices(["TEST"], [100])
+    │   ├─ emit PriceUpdated(asset: 0x852daa74cc3c31fe64542bb9b8764cfb91cc30f9acf9389071ffb44a9eefde46, newPrice: 100)
+    │   └─ ← [Stop]
+    ├─ [7405784] → new NewEraHook@0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0
+    │   └─ ← [Return] 36970 bytes of code
+    ├─ [77205] PoolManager::initialize(PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), 79228162514264337593543950336 [7.922e28])
+    │   ├─ [46935] NewEraHook::beforeInitialize(NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), 79228162514264337593543950336 [7.922e28])
+    │   │   └─ ← [Return] 0xdc98354e
+    │   ├─ emit Initialize(id: 0x69b3ee87d25191b43923b3104db503ce56544fbbc8fd0ad0c88faa01b9c73814, currency0: MockERC20: [0x15cF58144EF33af1e14b5208015d11F9143E27b9], currency1: MockERC20: [0x212224D2F2d262cd093eE13240ca4873fcCBbA3C], fee: 500, tickSpacing: 10, hooks: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], sqrtPriceX96: 79228162514264337593543950336 [7.922e28], tick: 0)
+    │   └─ ← [Return] 0
+    ├─ [907811] → new PoolModifyLiquidityTest@0xD16d567549A2a2a2005aEACf7fB193851603dd70
+    │   └─ ← [Return] 4533 bytes of code
+    ├─ [24305] MockERC20::approve(NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   ├─ emit Approval(owner: NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], spender: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], value: 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   └─ ← [Return] true
+    ├─ [24305] MockERC20::approve(NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   ├─ emit Approval(owner: NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], spender: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], value: 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   └─ ← [Return] true
+    ├─ [24305] MockERC20::approve(0x0000000000000000000000000000000000000000, 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   ├─ emit Approval(owner: NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], spender: 0x0000000000000000000000000000000000000000, value: 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   └─ ← [Return] true
+    ├─ [24305] MockERC20::approve(0x0000000000000000000000000000000000000000, 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   ├─ emit Approval(owner: NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], spender: 0x0000000000000000000000000000000000000000, value: 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   └─ ← [Return] true
+    └─ ← [Return]
+
+  [258265] NewEraHookBasicTest::test_TWAMMOrderExecutionOverTime()
+    ├─ [0] VM::startPrank(0x0000000000000000000000000000000000000123)
+    │   └─ ← [Return]
+    ├─ [237389] PoolModifyLiquidityTest::modifyLiquidity(PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), ModifyLiquidityParams({ tickLower: -60, tickUpper: 60, liquidityDelta: 333516566385114604535 [3.335e20], salt: 0x0000000000000000000000000000000000000000000000000000000000000000 }), 0x)
+    │   ├─ [232144] PoolManager::unlock(0x0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000012300000000000000000000000015cf58144ef33af1e14b5208015d11f9143e27b9000000000000000000000000212224d2f2d262cd093ee13240ca4873fccbba3c00000000000000000000000000000000000000000000000000000000000001f4000000000000000000000000000000000000000000000000000000000000000a00000000000000000000000004fcade49733395d6dfcb6bc998dcfe8e15ee8c0ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc4000000000000000000000000000000000000000000000000000000000000003c0000000000000000000000000000000000000000000000121478de14acbde3f7000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001a0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000)
+    │   │   ├─ [230822] PoolModifyLiquidityTest::unlockCallback(0x0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000012300000000000000000000000015cf58144ef33af1e14b5208015d11f9143e27b9000000000000000000000000212224d2f2d262cd093ee13240ca4873fccbba3c00000000000000000000000000000000000000000000000000000000000001f4000000000000000000000000000000000000000000000000000000000000000a00000000000000000000000004fcade49733395d6dfcb6bc998dcfe8e15ee8c0ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc4000000000000000000000000000000000000000000000000000000000000003c0000000000000000000000000000000000000000000000121478de14acbde3f7000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001a0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000)
+    │   │   │   ├─ [6952] PoolManager::extsload(0x6d4fbf803b1d11d75f63e17e86d9fe34b27737c4c0e6d590b1c01abd2738fd01, 3) [staticcall]
+    │   │   │   │   └─ ← [Return] [0x0000000000000000000000000000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000000000000000000000000000]
+    │   │   │   ├─ [192401] PoolManager::modifyLiquidity(PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), ModifyLiquidityParams({ tickLower: -60, tickUpper: 60, liquidityDelta: 333516566385114604535 [3.335e20], salt: 0x0000000000000000000000000000000000000000000000000000000000000000 }), 0x)
+    │   │   │   │   ├─ [28341] NewEraHook::beforeAddLiquidity(PoolModifyLiquidityTest: [0xD16d567549A2a2a2005aEACf7fB193851603dd70], PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), ModifyLiquidityParams({ tickLower: -60, tickUpper: 60, liquidityDelta: 333516566385114604535 [3.335e20], salt: 0x0000000000000000000000000000000000000000000000000000000000000000 }), 0x)
+    │   │   │   │   │   ├─ [2378] PoolManager::extsload(0x0825676e9b33ad3f7c67c3de6d9923b0d0bdb7557b274a92f9d56f76cf384f2d) [staticcall]
+    │   │   │   │   │   │   └─ ← [Return] 0x0000000000000000000000000000000000000000000000000000000000000000
+    │   │   │   │   │   ├─ [2378] PoolManager::extsload(0x4db038090f7a8b626de736d9f85127228dfb547626f5c9f914f7d8ff079d41f6) [staticcall]
+    │   │   │   │   │   │   └─ ← [Return] 0x0000000000000000000000000000000000000000000000000000000000000000
+    │   │   │   │   │   ├─ [2766] MockERC20::name() [staticcall]
+    │   │   │   │   │   │   └─ ← [Return] "TEST"
+    │   │   │   │   │   ├─ [5250] PriceOracle::getLatestPrice("TEST") [staticcall]
+    │   │   │   │   │   │   └─ ← [Return] 100
+    │   │   │   │   │   └─ ← [Return] 0x259982e5
+    │   │   │   │   ├─ emit ModifyLiquidity(id: 0x69b3ee87d25191b43923b3104db503ce56544fbbc8fd0ad0c88faa01b9c73814, sender: PoolModifyLiquidityTest: [0xD16d567549A2a2a2005aEACf7fB193851603dd70], tickLower: -60, tickUpper: 60, liquidityDelta: 333516566385114604535 [3.335e20], salt: 0x0000000000000000000000000000000000000000000000000000000000000000)
+    │   │   │   │   └─ ← [Return] -339942254695200985128860597590701695666274121068231788544 [-3.399e56], 0
+    │   │   │   ├─ [952] PoolManager::extsload(0x6d4fbf803b1d11d75f63e17e86d9fe34b27737c4c0e6d590b1c01abd2738fd01, 3) [staticcall]
+    │   │   │   │   └─ ← [Return] [0x0000000000000000000000000000000000000000000000121478de14acbde3f7, 0x0000000000000000000000000000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000000000000000000000000000]
+    │   │   │   ├─ [2552] MockERC20::balanceOf(0x0000000000000000000000000000000000000123) [staticcall]
+    │   │   │   │   └─ ← [Return] 0
+    │   │   │   ├─ [2552] MockERC20::balanceOf(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f]) [staticcall]
+    │   │   │   │   └─ ← [Return] 0
+    │   │   │   ├─ [862] PoolManager::exttload(0x17bcf978330fedead3b5f16e212cb594cc5b249052cc1a60f1a18ae0ccb6e0d2) [staticcall]
+    │   │   │   │   └─ ← [Return] 0xfffffffffffffffffffffffffffffffffffffffffffffffff222d656930ff800
+    │   │   │   ├─ [2552] MockERC20::balanceOf(0x0000000000000000000000000000000000000123) [staticcall]
+    │   │   │   │   └─ ← [Return] 0
+    │   │   │   ├─ [2552] MockERC20::balanceOf(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f]) [staticcall]
+    │   │   │   │   └─ ← [Return] 0
+    │   │   │   ├─ [862] PoolManager::exttload(0x1eee6f96d0380c0623ac4c17722d1e8694e5719218585ad6a2977dca9a264cdd) [staticcall]
+    │   │   │   │   └─ ← [Return] 0xfffffffffffffffffffffffffffffffffffffffffffffffff222d656930ff800
+    │   │   │   ├─ [2017] PoolManager::sync(MockERC20: [0x15cF58144EF33af1e14b5208015d11F9143E27b9])
+    │   │   │   │   ├─ [552] MockERC20::balanceOf(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f]) [staticcall]
+    │   │   │   │   │   └─ ← [Return] 0
+    │   │   │   │   └─ ← [Stop]
+    │   │   │   ├─ [2754] MockERC20::transferFrom(0x0000000000000000000000000000000000000123, PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], 999000500000000000 [9.99e17])
+    │   │   │   │   └─ ← [Revert] panic: arithmetic underflow or overflow (0x11)
+    │   │   │   └─ ← [Revert] panic: arithmetic underflow or overflow (0x11)
+    │   │   └─ ← [Revert] panic: arithmetic underflow or overflow (0x11)
+    │   └─ ← [Revert] panic: arithmetic underflow or overflow (0x11)
+    └─ ← [Revert] panic: arithmetic underflow or overflow (0x11)
+
+[PASS] test_TWAMMOrderWithZeroTolerance() (gas: 300529)
+Logs:
+  === submitTWAMMOrder ===
+  amountIn: 100000000000000000000
+  expirationInterval: 30000
+  tolerance: 0
+  duration: 20000
+  calculated sellRate: 5000000000000000
+  Sender balance before transfer: 100000000000000000000
+  Contract balance before transfer: 0
+  Amount to transfer: 100000000000000000000
+  Allowance: 100000000000000000000
+  Sender balance after transfer: 0
+  Contract balance after transfer: 100000000000000000000
+
+Traces:
+  [340329] NewEraHookBasicTest::test_TWAMMOrderWithZeroTolerance()
+    ├─ [0] VM::startPrank(0x0000000000000000000000000000000000000123)
+    │   └─ ← [Return]
+    ├─ [1264] NewEraHook::createOrderKey(0x0000000000000000000000000000000000000123, 30000 [3e4], true) [staticcall]
+    │   └─ ← [Return] OrderKey({ owner: 0x0000000000000000000000000000000000000123, expiration: 30000 [3e4], zeroForOne: true })
+    ├─ [29398] MockERC20::mint(0x0000000000000000000000000000000000000123, 100000000000000000000 [1e20])
+    │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000000, to: 0x0000000000000000000000000000000000000123, value: 100000000000000000000 [1e20])
+    │   └─ ← [Stop]
+    ├─ [24305] MockERC20::approve(NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], 100000000000000000000 [1e20])
+    │   ├─ emit Approval(owner: 0x0000000000000000000000000000000000000123, spender: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], value: 100000000000000000000 [1e20])
+    │   └─ ← [Return] true
+    ├─ [24305] MockERC20::approve(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], 100000000000000000000 [1e20])
+    │   ├─ emit Approval(owner: 0x0000000000000000000000000000000000000123, spender: PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], value: 100000000000000000000 [1e20])
+    │   └─ ← [Return] true
+    ├─ [0] VM::warp(10000 [1e4])
+    │   └─ ← [Return]
+    ├─ [214676] NewEraHook::submitTWAMMOrder(PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), OrderKey({ owner: 0x0000000000000000000000000000000000000123, expiration: 30000 [3e4], zeroForOne: true }), 100000000000000000000 [1e20], 30000 [3e4], 0)
+    │   ├─ [0] console::log("=== submitTWAMMOrder ===") [staticcall]
+    │   │   └─ ← [Stop]
+    │   ├─ [0] console::log("amountIn:", 100000000000000000000 [1e20]) [staticcall]
+    │   │   └─ ← [Stop]
+    │   ├─ [0] console::log("expirationInterval:", 30000 [3e4]) [staticcall]
+    │   │   └─ ← [Stop]
+    │   ├─ [0] console::log("tolerance:", 0) [staticcall]
+    │   │   └─ ← [Stop]
+    │   ├─ [2378] PoolManager::extsload(0x0825676e9b33ad3f7c67c3de6d9923b0d0bdb7557b274a92f9d56f76cf384f2d) [staticcall]
+    │   │   └─ ← [Return] 0x0000000000000000000000000000000000000000000000000000000000000000
+    │   ├─ [2378] PoolManager::extsload(0x4db038090f7a8b626de736d9f85127228dfb547626f5c9f914f7d8ff079d41f6) [staticcall]
+    │   │   └─ ← [Return] 0x0000000000000000000000000000000000000000000000000000000000000000
+    │   ├─ [2766] MockERC20::name() [staticcall]
+    │   │   └─ ← [Return] "TEST"
+    │   ├─ [5250] PriceOracle::getLatestPrice("TEST") [staticcall]
+    │   │   └─ ← [Return] 100
+    │   ├─ [0] console::log("duration:", 20000 [2e4]) [staticcall]
+    │   │   └─ ← [Stop]
+    │   ├─ [0] console::log("calculated sellRate:", 5000000000000000 [5e15]) [staticcall]
+    │   │   └─ ← [Stop]
+    │   ├─ [552] MockERC20::balanceOf(0x0000000000000000000000000000000000000123) [staticcall]
+    │   │   └─ ← [Return] 100000000000000000000 [1e20]
+    │   ├─ [0] console::log("Sender balance before transfer:", 100000000000000000000 [1e20]) [staticcall]
+    │   │   └─ ← [Stop]
+    │   ├─ [2552] MockERC20::balanceOf(NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0]) [staticcall]
+    │   │   └─ ← [Return] 0
+    │   ├─ [0] console::log("Contract balance before transfer:", 0) [staticcall]
+    │   │   └─ ← [Stop]
+    │   ├─ [0] console::log("Amount to transfer:", 100000000000000000000 [1e20]) [staticcall]
+    │   │   └─ ← [Stop]
+    │   ├─ [848] MockERC20::allowance(0x0000000000000000000000000000000000000123, NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0]) [staticcall]
+    │   │   └─ ← [Return] 100000000000000000000 [1e20]
+    │   ├─ [0] console::log("Allowance:", 100000000000000000000 [1e20]) [staticcall]
+    │   │   └─ ← [Stop]
+    │   ├─ [23316] MockERC20::transferFrom(0x0000000000000000000000000000000000000123, NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], 100000000000000000000 [1e20])
+    │   │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000123, to: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], value: 100000000000000000000 [1e20])
+    │   │   └─ ← [Return] true
+    │   ├─ [552] MockERC20::balanceOf(0x0000000000000000000000000000000000000123) [staticcall]
+    │   │   └─ ← [Return] 0
+    │   ├─ [0] console::log("Sender balance after transfer:", 0) [staticcall]
+    │   │   └─ ← [Stop]
+    │   ├─ [552] MockERC20::balanceOf(NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0]) [staticcall]
+    │   │   └─ ← [Return] 100000000000000000000 [1e20]
+    │   ├─ [0] console::log("Contract balance after transfer:", 100000000000000000000 [1e20]) [staticcall]
+    │   │   └─ ← [Stop]
+    │   ├─ emit SubmitOrder(poolId: 0x69b3ee87d25191b43923b3104db503ce56544fbbc8fd0ad0c88faa01b9c73814, owner: 0x0000000000000000000000000000000000000123, expiration: 30000 [3e4], zeroForOne: true, sellRate: 5000000000000000 [5e15], earningsFactorLast: 0, tolerance: 0)
+    │   └─ ← [Return] 0xfd215bc474f46996d892e49c2186ee02f17ff27e1b76741fd74070911740f158
+    ├─ [2507] NewEraHook::getTWAMMOrder(PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), OrderKey({ owner: 0x0000000000000000000000000000000000000123, expiration: 30000 [3e4], zeroForOne: true })) [staticcall]
+    │   └─ ← [Return] Order({ sellRate: 5000000000000000 [5e15], earningsFactorLast: 0, tolerance: 0 })
+    ├─ [0] VM::assertEq(5000000000000000 [5e15], 5000000000000000 [5e15], "Order should be created with correct sell rate") [staticcall]
+    │   └─ ← [Return]
+    ├─ [0] VM::assertEq(0, 0, "Tolerance should be zero") [staticcall]
+    │   └─ ← [Return]
+    ├─ [2507] NewEraHook::getTWAMMOrder(PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), OrderKey({ owner: 0x0000000000000000000000000000000000000123, expiration: 30000 [3e4], zeroForOne: true })) [staticcall]
+    │   └─ ← [Return] Order({ sellRate: 5000000000000000 [5e15], earningsFactorLast: 0, tolerance: 0 })
+    ├─ [1522] NewEraHook::getTWAMMOrderPool(PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), true) [staticcall]
+    │   └─ ← [Return] 5000000000000000 [5e15], 0
+    ├─ [3535] NewEraHook::getTWAMMOrderPool(PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), false) [staticcall]
+    │   └─ ← [Return] 0, 0
+    ├─ [0] VM::assertEq(5000000000000000 [5e15], 5000000000000000 [5e15], "Order should still be active") [staticcall]
+    │   └─ ← [Return]
+    ├─ [0] VM::assertEq(5000000000000000 [5e15], 5000000000000000 [5e15], "Order pool should have the correct sell rate") [staticcall]
+    │   └─ ← [Return]
+    ├─ [0] VM::assertEq(0, 0, "Other order pool should be empty") [staticcall]
+    │   └─ ← [Return]
+    ├─ [0] VM::stopPrank()
+    │   └─ ← [Return]
+    └─ ← [Return]
+
+[PASS] test_afterSwapOrderExecution() (gas: 1172866)
+Logs:
+  === _executeLimitOrder ===
+  Order amount: 100
+  Order totalAmount: 105
+  Order zeroForOne: false
+  Swap params amountSpecified: 100
+  Swap delta amount0: 100
+  Swap delta amount1: -102
+  Settling currency1 amount: 102
+  === _settle ===
+  Currency: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C
+  Amount to settle: 102
+  Contract balance before settle: 315
+  Contract balance after settle: 213
+  Taking currency0 amount: 100
+  === _take ===
+  Currency: 0x15cF58144EF33af1e14b5208015d11F9143E27b9
+  Amount to take: 100
+  Contract balance before take: 0
+  Contract balance after take: 100
+  === _executeLimitOrder ===
+  Order amount: 200
+  Order totalAmount: 210
+  Order zeroForOne: false
+  Swap params amountSpecified: 200
+  Swap delta amount0: 200
+  Swap delta amount1: -202
+  Settling currency1 amount: 202
+  === _settle ===
+  Currency: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C
+  Amount to settle: 202
+  Contract balance before settle: 213
+  Contract balance after settle: 11
+  Taking currency0 amount: 200
+  === _take ===
+  Currency: 0x15cF58144EF33af1e14b5208015d11F9143E27b9
+  Amount to take: 200
+  Contract balance before take: 100
+  Contract balance after take: 300
+
+Traces:
+  [1192766] NewEraHookBasicTest::test_afterSwapOrderExecution()
+    ├─ [0] VM::startPrank(0x0000000000000000000000000000000000000123)
+    │   └─ ← [Return]
+    ├─ [29398] MockERC20::mint(0x0000000000000000000000000000000000000123, 200)
+    │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000000, to: 0x0000000000000000000000000000000000000123, value: 200)
+    │   └─ ← [Stop]
+    ├─ [29398] MockERC20::mint(0x0000000000000000000000000000000000000123, 200)
+    │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000000, to: 0x0000000000000000000000000000000000000123, value: 200)
+    │   └─ ← [Stop]
+    ├─ [2698] MockERC20::mint(0x0000000000000000000000000000000000000123, 400)
+    │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000000, to: 0x0000000000000000000000000000000000000123, value: 400)
+    │   └─ ← [Stop]
+    ├─ [2698] MockERC20::mint(0x0000000000000000000000000000000000000123, 400)
+    │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000000, to: 0x0000000000000000000000000000000000000123, value: 400)
+    │   └─ ← [Stop]
+    ├─ [24305] MockERC20::approve(NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   ├─ emit Approval(owner: 0x0000000000000000000000000000000000000123, spender: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], value: 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   └─ ← [Return] true
+    ├─ [24305] MockERC20::approve(NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   ├─ emit Approval(owner: 0x0000000000000000000000000000000000000123, spender: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], value: 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   └─ ← [Return] true
+    ├─ [24305] MockERC20::approve(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   ├─ emit Approval(owner: 0x0000000000000000000000000000000000000123, spender: PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], value: 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   └─ ← [Return] true
+    ├─ [24305] MockERC20::approve(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   ├─ emit Approval(owner: 0x0000000000000000000000000000000000000123, spender: PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], value: 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   └─ ← [Return] true
+    ├─ [906] NewEraHook::calculateOrderAmounts(100, PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 })) [staticcall]
+    │   └─ ← [Return] 100, 105
+    ├─ [197382] NewEraHook::placeLimitOrder(PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), 100, 105, 200, false)
+    │   ├─ [2766] MockERC20::name() [staticcall]
+    │   │   └─ ← [Return] "TEST"
+    │   ├─ [5250] PriceOracle::getLatestPrice("TEST") [staticcall]
+    │   │   └─ ← [Return] 100
+    │   ├─ [25007] MockERC20::transferFrom(0x0000000000000000000000000000000000000123, NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], 105)
+    │   │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000123, to: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], value: 105)
+    │   │   └─ ← [Return] true
+    │   ├─ emit LimitOrderPlaced(poolId: 0x69b3ee87d25191b43923b3104db503ce56544fbbc8fd0ad0c88faa01b9c73814, user: 0x0000000000000000000000000000000000000123, orderId: 0, amount: 100, oraclePrice: 100, tolerance: 200)
+    │   └─ ← [Stop]
+    ├─ [906] NewEraHook::calculateOrderAmounts(200, PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 })) [staticcall]
+    │   └─ ← [Return] 200, 210
+    ├─ [145082] NewEraHook::placeLimitOrder(PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), 200, 210, 100, false)
+    │   ├─ [766] MockERC20::name() [staticcall]
+    │   │   └─ ← [Return] "TEST"
+    │   ├─ [1250] PriceOracle::getLatestPrice("TEST") [staticcall]
+    │   │   └─ ← [Return] 100
+    │   ├─ [3107] MockERC20::transferFrom(0x0000000000000000000000000000000000000123, NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], 210)
+    │   │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000123, to: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], value: 210)
+    │   │   └─ ← [Return] true
+    │   ├─ emit LimitOrderPlaced(poolId: 0x69b3ee87d25191b43923b3104db503ce56544fbbc8fd0ad0c88faa01b9c73814, user: 0x0000000000000000000000000000000000000123, orderId: 1, amount: 200, oraclePrice: 100, tolerance: 100)
+    │   └─ ← [Stop]
+    ├─ [0] VM::stopPrank()
+    │   └─ ← [Return]
+    ├─ [7498] MockERC20::mint(NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], 100000000000000000000 [1e20])
+    │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000000, to: NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], value: 100000000000000000000 [1e20])
+    │   └─ ← [Stop]
+    ├─ [7498] MockERC20::mint(NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], 100000000000000000000 [1e20])
+    │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000000, to: NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], value: 100000000000000000000 [1e20])
+    │   └─ ← [Stop]
+    ├─ [24305] MockERC20::approve(PoolModifyLiquidityTest: [0xD16d567549A2a2a2005aEACf7fB193851603dd70], 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   ├─ emit Approval(owner: NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], spender: PoolModifyLiquidityTest: [0xD16d567549A2a2a2005aEACf7fB193851603dd70], value: 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   └─ ← [Return] true
+    ├─ [24305] MockERC20::approve(PoolModifyLiquidityTest: [0xD16d567549A2a2a2005aEACf7fB193851603dd70], 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   ├─ emit Approval(owner: NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], spender: PoolModifyLiquidityTest: [0xD16d567549A2a2a2005aEACf7fB193851603dd70], value: 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   └─ ← [Return] true
+    ├─ [272318] PoolModifyLiquidityTest::modifyLiquidity(PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), ModifyLiquidityParams({ tickLower: -10, tickUpper: 10, liquidityDelta: 10000000000000000000 [1e19], salt: 0x0000000000000000000000000000000000000000000000000000000000000000 }), 0x)
+    │   ├─ [266427] PoolManager::unlock(0x00000000000000000000000000000000000000000000000000000000000000200000000000000000000000007fa9385be102ac3eac297483dd6233d62b3e149600000000000000000000000015cf58144ef33af1e14b5208015d11f9143e27b9000000000000000000000000212224d2f2d262cd093ee13240ca4873fccbba3c00000000000000000000000000000000000000000000000000000000000001f4000000000000000000000000000000000000000000000000000000000000000a00000000000000000000000004fcade49733395d6dfcb6bc998dcfe8e15ee8c0fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff6000000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000000000000000000000000008ac7230489e80000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001a0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000)
+    │   │   ├─ [264162] PoolModifyLiquidityTest::unlockCallback(0x00000000000000000000000000000000000000000000000000000000000000200000000000000000000000007fa9385be102ac3eac297483dd6233d62b3e149600000000000000000000000015cf58144ef33af1e14b5208015d11f9143e27b9000000000000000000000000212224d2f2d262cd093ee13240ca4873fccbba3c00000000000000000000000000000000000000000000000000000000000001f4000000000000000000000000000000000000000000000000000000000000000a00000000000000000000000004fcade49733395d6dfcb6bc998dcfe8e15ee8c0fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff6000000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000000000000000000000000008ac7230489e80000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001a0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000)
+    │   │   │   ├─ [6952] PoolManager::extsload(0xbc2d1daaeeebb84265efb2eee389e5c8848c0193d460fb5f9007219f624e8f7b, 3) [staticcall]
+    │   │   │   │   └─ ← [Return] [0x0000000000000000000000000000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000000000000000000000000000]
+    │   │   │   ├─ [178773] PoolManager::modifyLiquidity(PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), ModifyLiquidityParams({ tickLower: -10, tickUpper: 10, liquidityDelta: 10000000000000000000 [1e19], salt: 0x0000000000000000000000000000000000000000000000000000000000000000 }), 0x)
+    │   │   │   │   ├─ [17341] NewEraHook::beforeAddLiquidity(PoolModifyLiquidityTest: [0xD16d567549A2a2a2005aEACf7fB193851603dd70], PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), ModifyLiquidityParams({ tickLower: -10, tickUpper: 10, liquidityDelta: 10000000000000000000 [1e19], salt: 0x0000000000000000000000000000000000000000000000000000000000000000 }), 0x)
+    │   │   │   │   │   ├─ [2378] PoolManager::extsload(0x0825676e9b33ad3f7c67c3de6d9923b0d0bdb7557b274a92f9d56f76cf384f2d) [staticcall]
+    │   │   │   │   │   │   └─ ← [Return] 0x0000000000000000000000000000000000000000000000000000000000000000
+    │   │   │   │   │   ├─ [2378] PoolManager::extsload(0x4db038090f7a8b626de736d9f85127228dfb547626f5c9f914f7d8ff079d41f6) [staticcall]
+    │   │   │   │   │   │   └─ ← [Return] 0x0000000000000000000000000000000000000000000000000000000000000000
+    │   │   │   │   │   ├─ [766] MockERC20::name() [staticcall]
+    │   │   │   │   │   │   └─ ← [Return] "TEST"
+    │   │   │   │   │   ├─ [1250] PriceOracle::getLatestPrice("TEST") [staticcall]
+    │   │   │   │   │   │   └─ ← [Return] 100
+    │   │   │   │   │   └─ ← [Return] 0x259982e5
+    │   │   │   │   ├─ emit ModifyLiquidity(id: 0x69b3ee87d25191b43923b3104db503ce56544fbbc8fd0ad0c88faa01b9c73814, sender: PoolModifyLiquidityTest: [0xD16d567549A2a2a2005aEACf7fB193851603dd70], tickLower: -10, tickUpper: 10, liquidityDelta: 10000000000000000000 [1e19], salt: 0x0000000000000000000000000000000000000000000000000000000000000000)
+    │   │   │   │   └─ ← [Return] -1700901530129323649654077546247931344061753916366547485 [-1.7e54], 0
+    │   │   │   ├─ [952] PoolManager::extsload(0xbc2d1daaeeebb84265efb2eee389e5c8848c0193d460fb5f9007219f624e8f7b, 3) [staticcall]
+    │   │   │   │   └─ ← [Return] [0x0000000000000000000000000000000000000000000000008ac7230489e80000, 0x0000000000000000000000000000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000000000000000000000000000]
+    │   │   │   ├─ [552] MockERC20::balanceOf(NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496]) [staticcall]
+    │   │   │   │   └─ ← [Return] 57896044618658097711785492504343953926634992332820282019828792003956564819968 [5.789e76]
+    │   │   │   ├─ [2552] MockERC20::balanceOf(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f]) [staticcall]
+    │   │   │   │   └─ ← [Return] 0
+    │   │   │   ├─ [862] PoolManager::exttload(0x17bcf978330fedead3b5f16e212cb594cc5b249052cc1a60f1a18ae0ccb6e0d2) [staticcall]
+    │   │   │   │   └─ ← [Return] 0xffffffffffffffffffffffffffffffffffffffffffffffffffee3de3f23b95e3
+    │   │   │   ├─ [552] MockERC20::balanceOf(NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496]) [staticcall]
+    │   │   │   │   └─ ← [Return] 57896044618658097711785492504343953926634992332820282019828792003956564819968 [5.789e76]
+    │   │   │   ├─ [2552] MockERC20::balanceOf(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f]) [staticcall]
+    │   │   │   │   └─ ← [Return] 0
+    │   │   │   ├─ [862] PoolManager::exttload(0x1eee6f96d0380c0623ac4c17722d1e8694e5719218585ad6a2977dca9a264cdd) [staticcall]
+    │   │   │   │   └─ ← [Return] 0xffffffffffffffffffffffffffffffffffffffffffffffffffee3de3f23b95e3
+    │   │   │   ├─ [2017] PoolManager::sync(MockERC20: [0x15cF58144EF33af1e14b5208015d11F9143E27b9])
+    │   │   │   │   ├─ [552] MockERC20::balanceOf(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f]) [staticcall]
+    │   │   │   │   │   └─ ← [Return] 0
+    │   │   │   │   └─ ← [Stop]
+    │   │   │   ├─ [23007] MockERC20::transferFrom(NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], 4998500349930013 [4.998e15])
+    │   │   │   │   ├─ emit Transfer(from: NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], to: PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], value: 4998500349930013 [4.998e15])
+    │   │   │   │   └─ ← [Return] true
+    │   │   │   ├─ [2743] PoolManager::settle()
+    │   │   │   │   ├─ [552] MockERC20::balanceOf(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f]) [staticcall]
+    │   │   │   │   │   └─ ← [Return] 4998500349930013 [4.998e15]
+    │   │   │   │   └─ ← [Return] 4998500349930013 [4.998e15]
+    │   │   │   ├─ [2017] PoolManager::sync(MockERC20: [0x212224D2F2d262cd093eE13240ca4873fcCBbA3C])
+    │   │   │   │   ├─ [552] MockERC20::balanceOf(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f]) [staticcall]
+    │   │   │   │   │   └─ ← [Return] 0
+    │   │   │   │   └─ ← [Stop]
+    │   │   │   ├─ [23007] MockERC20::transferFrom(NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], 4998500349930013 [4.998e15])
+    │   │   │   │   ├─ emit Transfer(from: NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], to: PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], value: 4998500349930013 [4.998e15])
+    │   │   │   │   └─ ← [Return] true
+    │   │   │   ├─ [2743] PoolManager::settle()
+    │   │   │   │   ├─ [552] MockERC20::balanceOf(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f]) [staticcall]
+    │   │   │   │   │   └─ ← [Return] 4998500349930013 [4.998e15]
+    │   │   │   │   └─ ← [Return] 4998500349930013 [4.998e15]
+    │   │   │   └─ ← [Return] 0xffffffffffffffffffee3de3f23b95e3ffffffffffffffffffee3de3f23b95e3
+    │   │   └─ ← [Return] 0xffffffffffffffffffee3de3f23b95e3ffffffffffffffffffee3de3f23b95e3
+    │   └─ ← [Return] -1700901530129323649654077546247931344061753916366547485 [-1.7e54]
+    ├─ [290155] PoolSwapTest::swap(PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), SwapParams({ zeroForOne: false, amountSpecified: 1000000000000000000000 [1e21], sqrtPriceLimitX96: 101729702841318637793976746270 [1.017e29] }), TestSettings({ takeClaims: true, settleUsingBurn: false }), 0x0000000000000000000000000000000000000000000000000000000000000123)
+    │   ├─ [286832] PoolManager::unlock(0x00000000000000000000000000000000000000000000000000000000000000200000000000000000000000007fa9385be102ac3eac297483dd6233d62b3e14960000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000015cf58144ef33af1e14b5208015d11f9143e27b9000000000000000000000000212224d2f2d262cd093ee13240ca4873fccbba3c00000000000000000000000000000000000000000000000000000000000001f4000000000000000000000000000000000000000000000000000000000000000a00000000000000000000000004fcade49733395d6dfcb6bc998dcfe8e15ee8c0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003635c9adc5dea00000000000000000000000000000000000000000000148b4d68157d6e8e30d43811e000000000000000000000000000000000000000000000000000000000000018000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000123)
+    │   │   ├─ [284567] PoolSwapTest::unlockCallback(0x00000000000000000000000000000000000000000000000000000000000000200000000000000000000000007fa9385be102ac3eac297483dd6233d62b3e14960000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000015cf58144ef33af1e14b5208015d11f9143e27b9000000000000000000000000212224d2f2d262cd093ee13240ca4873fccbba3c00000000000000000000000000000000000000000000000000000000000001f4000000000000000000000000000000000000000000000000000000000000000a00000000000000000000000004fcade49733395d6dfcb6bc998dcfe8e15ee8c0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003635c9adc5dea00000000000000000000000000000000000000000000148b4d68157d6e8e30d43811e000000000000000000000000000000000000000000000000000000000000018000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000123)
+    │   │   │   ├─ [552] MockERC20::balanceOf(NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496]) [staticcall]
+    │   │   │   │   └─ ← [Return] 57896044618658097711785492504343953926634992332820282019828787005456214889955 [5.789e76]
+    │   │   │   ├─ [552] MockERC20::balanceOf(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f]) [staticcall]
+    │   │   │   │   └─ ← [Return] 4998500349930013 [4.998e15]
+    │   │   │   ├─ [862] PoolManager::exttload(0x85be7c2bd5cfd9e6e3a30072d5be012f0c0649c579d3433f4d5ee458bdb429be) [staticcall]
+    │   │   │   │   └─ ← [Return] 0x0000000000000000000000000000000000000000000000000000000000000000
+    │   │   │   ├─ [552] MockERC20::balanceOf(NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496]) [staticcall]
+    │   │   │   │   └─ ← [Return] 57896044618658097711785492504343953926634992332820282019828787005456214889955 [5.789e76]
+    │   │   │   ├─ [552] MockERC20::balanceOf(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f]) [staticcall]
+    │   │   │   │   └─ ← [Return] 4998500349930013 [4.998e15]
+    │   │   │   ├─ [862] PoolManager::exttload(0xec1690143798fa6d9be0e2ae9987311729015febf65e065811da6492f94dd07b) [staticcall]
+    │   │   │   │   └─ ← [Return] 0x0000000000000000000000000000000000000000000000000000000000000000
+    │   │   │   ├─ [228688] PoolManager::swap(PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), SwapParams({ zeroForOne: false, amountSpecified: 1000000000000000000000 [1e21], sqrtPriceLimitX96: 101729702841318637793976746270 [1.017e29] }), 0x0000000000000000000000000000000000000000000000000000000000000123)
+    │   │   │   │   ├─ [173925] NewEraHook::beforeSwap(PoolSwapTest: [0x2e234DAe75C793f67A35089C9d99245E1C58470b], PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), SwapParams({ zeroForOne: false, amountSpecified: 1000000000000000000000 [1e21], sqrtPriceLimitX96: 101729702841318637793976746270 [1.017e29] }), 0x0000000000000000000000000000000000000000000000000000000000000123)
+    │   │   │   │   │   ├─ [378] PoolManager::extsload(0x0825676e9b33ad3f7c67c3de6d9923b0d0bdb7557b274a92f9d56f76cf384f2d) [staticcall]
+    │   │   │   │   │   │   └─ ← [Return] 0x0000000000000000000000000000000000000000000000000000000000000000
+    │   │   │   │   │   ├─ [378] PoolManager::extsload(0x4db038090f7a8b626de736d9f85127228dfb547626f5c9f914f7d8ff079d41f6) [staticcall]
+    │   │   │   │   │   │   └─ ← [Return] 0x0000000000000000000000000000000000000000000000000000000000000000
+    │   │   │   │   │   ├─ [766] MockERC20::name() [staticcall]
+    │   │   │   │   │   │   └─ ← [Return] "TEST"
+    │   │   │   │   │   ├─ [1250] PriceOracle::getLatestPrice("TEST") [staticcall]
+    │   │   │   │   │   │   └─ ← [Return] 100
+    │   │   │   │   │   ├─ [766] MockERC20::name() [staticcall]
+    │   │   │   │   │   │   └─ ← [Return] "TEST"
+    │   │   │   │   │   ├─ [1250] PriceOracle::getLatestPrice("TEST") [staticcall]
+    │   │   │   │   │   │   └─ ← [Return] 100
+    │   │   │   │   │   ├─ [0] console::log("=== _executeLimitOrder ===") [staticcall]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [0] console::log("Order amount:", 100) [staticcall]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [0] console::log("Order totalAmount:", 105) [staticcall]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [0] console::log("Order zeroForOne:", false) [staticcall]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [0] console::log("Swap params amountSpecified:", 100) [staticcall]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [38485] PoolManager::swap(PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), SwapParams({ zeroForOne: false, amountSpecified: 100, sqrtPriceLimitX96: 79232123823359799118286999568 [7.923e28] }), 0x)
+    │   │   │   │   │   │   ├─ emit Swap(id: 0x69b3ee87d25191b43923b3104db503ce56544fbbc8fd0ad0c88faa01b9c73814, sender: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], amount0: 100, amount1: -102, sqrtPriceX96: 79228162514264338385825575479 [7.922e28], liquidity: 10000000000000000000 [1e19], tick: 0, fee: 500)
+    │   │   │   │   │   │   └─ ← [Return] 34368519059014784809800835350608589356954 [3.436e40]
+    │   │   │   │   │   ├─ [0] console::log("Swap delta amount0:", 100) [staticcall]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [0] console::log("Swap delta amount1:", -102) [staticcall]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [0] console::log("Settling currency1 amount:", 102) [staticcall]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [0] console::log("=== _settle ===") [staticcall]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [0] console::log("Currency:", MockERC20: [0x212224D2F2d262cd093eE13240ca4873fcCBbA3C]) [staticcall]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [0] console::log("Amount to settle:", 102) [staticcall]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [552] MockERC20::balanceOf(NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0]) [staticcall]
+    │   │   │   │   │   │   └─ ← [Return] 315
+    │   │   │   │   │   ├─ [0] console::log("Contract balance before settle:", 315) [staticcall]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [2017] PoolManager::sync(MockERC20: [0x212224D2F2d262cd093eE13240ca4873fcCBbA3C])
+    │   │   │   │   │   │   ├─ [552] MockERC20::balanceOf(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f]) [staticcall]
+    │   │   │   │   │   │   │   └─ ← [Return] 4998500349930013 [4.998e15]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [2911] MockERC20::transfer(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], 102)
+    │   │   │   │   │   │   ├─ emit Transfer(from: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], to: PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], value: 102)
+    │   │   │   │   │   │   └─ ← [Return] true
+    │   │   │   │   │   ├─ [2743] PoolManager::settle()
+    │   │   │   │   │   │   ├─ [552] MockERC20::balanceOf(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f]) [staticcall]
+    │   │   │   │   │   │   │   └─ ← [Return] 4998500349930115 [4.998e15]
+    │   │   │   │   │   │   └─ ← [Return] 102
+    │   │   │   │   │   ├─ [552] MockERC20::balanceOf(NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0]) [staticcall]
+    │   │   │   │   │   │   └─ ← [Return] 213
+    │   │   │   │   │   ├─ [0] console::log("Contract balance after settle:", 213) [staticcall]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [0] console::log("Taking currency0 amount:", 100) [staticcall]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [0] console::log("=== _take ===") [staticcall]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [0] console::log("Currency:", MockERC20: [0x15cF58144EF33af1e14b5208015d11F9143E27b9]) [staticcall]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [0] console::log("Amount to take:", 100) [staticcall]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [2552] MockERC20::balanceOf(NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0]) [staticcall]
+    │   │   │   │   │   │   └─ ← [Return] 0
+    │   │   │   │   │   ├─ [0] console::log("Contract balance before take:", 0) [staticcall]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [24543] PoolManager::take(MockERC20: [0x15cF58144EF33af1e14b5208015d11F9143E27b9], NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], 100)
+    │   │   │   │   │   │   ├─ [22811] MockERC20::transfer(NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], 100)
+    │   │   │   │   │   │   │   ├─ emit Transfer(from: PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], to: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], value: 100)
+    │   │   │   │   │   │   │   └─ ← [Return] true
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [552] MockERC20::balanceOf(NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0]) [staticcall]
+    │   │   │   │   │   │   └─ ← [Return] 100
+    │   │   │   │   │   ├─ [0] console::log("Contract balance after take:", 100) [staticcall]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ emit LimitOrderExecuted(poolId: 0x69b3ee87d25191b43923b3104db503ce56544fbbc8fd0ad0c88faa01b9c73814, user: 0x0000000000000000000000000000000000000123, orderId: 0, amount: 100, executionPrice: 0)
+    │   │   │   │   │   ├─ emit LimitOrderExecuted(poolId: 0x69b3ee87d25191b43923b3104db503ce56544fbbc8fd0ad0c88faa01b9c73814, user: 0x0000000000000000000000000000000000000123, orderId: 0, amount: 100, executionPrice: 1648680055931175769 [1.648e18])
+    │   │   │   │   │   ├─ [766] MockERC20::name() [staticcall]
+    │   │   │   │   │   │   └─ ← [Return] "TEST"
+    │   │   │   │   │   ├─ [1250] PriceOracle::getLatestPrice("TEST") [staticcall]
+    │   │   │   │   │   │   └─ ← [Return] 100
+    │   │   │   │   │   ├─ [0] console::log("=== _executeLimitOrder ===") [staticcall]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [0] console::log("Order amount:", 200) [staticcall]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [0] console::log("Order totalAmount:", 210) [staticcall]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [0] console::log("Order zeroForOne:", false) [staticcall]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [0] console::log("Swap params amountSpecified:", 200) [staticcall]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [15785] PoolManager::swap(PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), SwapParams({ zeroForOne: false, amountSpecified: 200, sqrtPriceLimitX96: 79232123823359799118286999568 [7.923e28] }), 0x)
+    │   │   │   │   │   │   ├─ emit Swap(id: 0x69b3ee87d25191b43923b3104db503ce56544fbbc8fd0ad0c88faa01b9c73814, sender: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], amount0: 200, amount1: -202, sqrtPriceX96: 79228162514264339970388825765 [7.922e28], liquidity: 10000000000000000000 [1e19], tick: 0, fee: 500)
+    │   │   │   │   │   │   └─ ← [Return] 68396755751108631156138296093785410502454 [6.839e40]
+    │   │   │   │   │   ├─ [0] console::log("Swap delta amount0:", 200) [staticcall]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [0] console::log("Swap delta amount1:", -202) [staticcall]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [0] console::log("Settling currency1 amount:", 202) [staticcall]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [0] console::log("=== _settle ===") [staticcall]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [0] console::log("Currency:", MockERC20: [0x212224D2F2d262cd093eE13240ca4873fcCBbA3C]) [staticcall]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [0] console::log("Amount to settle:", 202) [staticcall]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [552] MockERC20::balanceOf(NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0]) [staticcall]
+    │   │   │   │   │   │   └─ ← [Return] 213
+    │   │   │   │   │   ├─ [0] console::log("Contract balance before settle:", 213) [staticcall]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [2017] PoolManager::sync(MockERC20: [0x212224D2F2d262cd093eE13240ca4873fcCBbA3C])
+    │   │   │   │   │   │   ├─ [552] MockERC20::balanceOf(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f]) [staticcall]
+    │   │   │   │   │   │   │   └─ ← [Return] 4998500349930115 [4.998e15]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [2911] MockERC20::transfer(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], 202)
+    │   │   │   │   │   │   ├─ emit Transfer(from: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], to: PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], value: 202)
+    │   │   │   │   │   │   └─ ← [Return] true
+    │   │   │   │   │   ├─ [2743] PoolManager::settle()
+    │   │   │   │   │   │   ├─ [552] MockERC20::balanceOf(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f]) [staticcall]
+    │   │   │   │   │   │   │   └─ ← [Return] 4998500349930317 [4.998e15]
+    │   │   │   │   │   │   └─ ← [Return] 202
+    │   │   │   │   │   ├─ [552] MockERC20::balanceOf(NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0]) [staticcall]
+    │   │   │   │   │   │   └─ ← [Return] 11
+    │   │   │   │   │   ├─ [0] console::log("Contract balance after settle:", 11) [staticcall]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [0] console::log("Taking currency0 amount:", 200) [staticcall]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [0] console::log("=== _take ===") [staticcall]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [0] console::log("Currency:", MockERC20: [0x15cF58144EF33af1e14b5208015d11F9143E27b9]) [staticcall]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [0] console::log("Amount to take:", 200) [staticcall]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [552] MockERC20::balanceOf(NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0]) [staticcall]
+    │   │   │   │   │   │   └─ ← [Return] 100
+    │   │   │   │   │   ├─ [0] console::log("Contract balance before take:", 100) [staticcall]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [4643] PoolManager::take(MockERC20: [0x15cF58144EF33af1e14b5208015d11F9143E27b9], NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], 200)
+    │   │   │   │   │   │   ├─ [2911] MockERC20::transfer(NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], 200)
+    │   │   │   │   │   │   │   ├─ emit Transfer(from: PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], to: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], value: 200)
+    │   │   │   │   │   │   │   └─ ← [Return] true
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [552] MockERC20::balanceOf(NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0]) [staticcall]
+    │   │   │   │   │   │   └─ ← [Return] 300
+    │   │   │   │   │   ├─ [0] console::log("Contract balance after take:", 300) [staticcall]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ emit LimitOrderExecuted(poolId: 0x69b3ee87d25191b43923b3104db503ce56544fbbc8fd0ad0c88faa01b9c73814, user: 0x0000000000000000000000000000000000000123, orderId: 0, amount: 200, executionPrice: 0)
+    │   │   │   │   │   ├─ emit LimitOrderExecuted(poolId: 0x69b3ee87d25191b43923b3104db503ce56544fbbc8fd0ad0c88faa01b9c73814, user: 0x0000000000000000000000000000000000000123, orderId: 1, amount: 200, executionPrice: 1648680055931175769 [1.648e18])
+    │   │   │   │   │   └─ ← [Return] 0x575e24b4, 0, 0
+    │   │   │   │   ├─ emit Swap(id: 0x69b3ee87d25191b43923b3104db503ce56544fbbc8fd0ad0c88faa01b9c73814, sender: PoolSwapTest: [0x2e234DAe75C793f67A35089C9d99245E1C58470b], amount0: 4998500349929712 [4.998e15], amount1: -5003501850930167 [-5.003e15], sqrtPriceX96: 101729702841318637793976746270 [1.017e29], liquidity: 0, tick: 5000, fee: 500)
+    │   │   │   │   ├─ [6543] NewEraHook::afterSwap(PoolSwapTest: [0x2e234DAe75C793f67A35089C9d99245E1C58470b], PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), SwapParams({ zeroForOne: false, amountSpecified: 1000000000000000000000 [1e21], sqrtPriceLimitX96: 101729702841318637793976746270 [1.017e29] }), 1700901530129221905226368185647355795044129815470461961 [1.7e54], 0x0000000000000000000000000000000000000000000000000000000000000123)
+    │   │   │   │   │   ├─ [766] MockERC20::name() [staticcall]
+    │   │   │   │   │   │   └─ ← [Return] "TEST"
+    │   │   │   │   │   ├─ [1250] PriceOracle::getLatestPrice("TEST") [staticcall]
+    │   │   │   │   │   │   └─ ← [Return] 100
+    │   │   │   │   │   └─ ← [Return] 0xb47b2fb1, 0
+    │   │   │   │   └─ ← [Return] 1700901530129221905226368185647355795044129815470461961 [1.7e54]
+    │   │   │   ├─ [552] MockERC20::balanceOf(NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496]) [staticcall]
+    │   │   │   │   └─ ← [Return] 57896044618658097711785492504343953926634992332820282019828787005456214889955 [5.789e76]
+    │   │   │   ├─ [552] MockERC20::balanceOf(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f]) [staticcall]
+    │   │   │   │   └─ ← [Return] 4998500349929713 [4.998e15]
+    │   │   │   ├─ [862] PoolManager::exttload(0x85be7c2bd5cfd9e6e3a30072d5be012f0c0649c579d3433f4d5ee458bdb429be) [staticcall]
+    │   │   │   │   └─ ← [Return] 0x0000000000000000000000000000000000000000000000000011c21c0dc468f0
+    │   │   │   ├─ [552] MockERC20::balanceOf(NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496]) [staticcall]
+    │   │   │   │   └─ ← [Return] 57896044618658097711785492504343953926634992332820282019828787005456214889955 [5.789e76]
+    │   │   │   ├─ [552] MockERC20::balanceOf(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f]) [staticcall]
+    │   │   │   │   └─ ← [Return] 4998500349930317 [4.998e15]
+    │   │   │   ├─ [862] PoolManager::exttload(0xec1690143798fa6d9be0e2ae9987311729015febf65e065811da6492f94dd07b) [staticcall]
+    │   │   │   │   └─ ← [Return] 0xffffffffffffffffffffffffffffffffffffffffffffffffffee3957718ad409
+    │   │   │   ├─ [2017] PoolManager::sync(MockERC20: [0x212224D2F2d262cd093eE13240ca4873fcCBbA3C])
+    │   │   │   │   ├─ [552] MockERC20::balanceOf(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f]) [staticcall]
+    │   │   │   │   │   └─ ← [Return] 4998500349930317 [4.998e15]
+    │   │   │   │   └─ ← [Stop]
+    │   │   │   ├─ [5107] MockERC20::transferFrom(NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], 5003501850930167 [5.003e15])
+    │   │   │   │   ├─ emit Transfer(from: NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], to: PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], value: 5003501850930167 [5.003e15])
+    │   │   │   │   └─ ← [Return] true
+    │   │   │   ├─ [2743] PoolManager::settle()
+    │   │   │   │   ├─ [552] MockERC20::balanceOf(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f]) [staticcall]
+    │   │   │   │   │   └─ ← [Return] 10002002200860484 [1e16]
+    │   │   │   │   └─ ← [Return] 5003501850930167 [5.003e15]
+    │   │   │   ├─ [26202] PoolManager::mint(NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], 124512733235148509670984850249661524172173354937 [1.245e47], 4998500349929712 [4.998e15])
+    │   │   │   │   ├─ emit Transfer(caller: PoolSwapTest: [0x2e234DAe75C793f67A35089C9d99245E1C58470b], from: 0x0000000000000000000000000000000000000000, to: NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], id: 124512733235148509670984850249661524172173354937 [1.245e47], amount: 4998500349929712 [4.998e15])
+    │   │   │   │   └─ ← [Stop]
+    │   │   │   └─ ← [Return] 0x00000000000000000011c21c0dc468f0ffffffffffffffffffee3957718ad409
+    │   │   └─ ← [Return] 0x00000000000000000011c21c0dc468f0ffffffffffffffffffee3957718ad409
+    │   └─ ← [Return] 1700901530129221905226368185647355795044129815470461961 [1.7e54]
+    ├─ [1353] NewEraHook::limitOrders(0x69b3ee87d25191b43923b3104db503ce56544fbbc8fd0ad0c88faa01b9c73814, 0x0000000000000000000000000000000000000123, 0) [staticcall]
+    │   └─ ← [Return] 0x0000000000000000000000000000000000000123, 100, 105, 100, 200, false, false, true
+    ├─ [1353] NewEraHook::limitOrders(0x69b3ee87d25191b43923b3104db503ce56544fbbc8fd0ad0c88faa01b9c73814, 0x0000000000000000000000000000000000000123, 1) [staticcall]
+    │   └─ ← [Return] 0x0000000000000000000000000000000000000123, 200, 210, 100, 100, false, false, true
+    ├─ [0] VM::assertFalse(false, "First order should be executed") [staticcall]
+    │   └─ ← [Return]
+    ├─ [0] VM::assertFalse(false, "Second order should be executed") [staticcall]
+    │   └─ ← [Return]
+    └─ ← [Return]
+
+[PASS] test_cancelLimitOrder() (gas: 267545)
+Traces:
+  [339697] NewEraHookBasicTest::test_cancelLimitOrder()
+    ├─ [0] VM::startPrank(0x0000000000000000000000000000000000000123)
+    │   └─ ← [Return]
+    ├─ [906] NewEraHook::calculateOrderAmounts(100, PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 })) [staticcall]
+    │   └─ ← [Return] 100, 105
+    ├─ [29398] MockERC20::mint(0x0000000000000000000000000000000000000123, 105)
+    │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000000, to: 0x0000000000000000000000000000000000000123, value: 105)
+    │   └─ ← [Stop]
+    ├─ [24305] MockERC20::approve(NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], 105)
+    │   ├─ emit Approval(owner: 0x0000000000000000000000000000000000000123, spender: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], value: 105)
+    │   └─ ← [Return] true
+    ├─ [24305] MockERC20::approve(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], 105)
+    │   ├─ emit Approval(owner: 0x0000000000000000000000000000000000000123, spender: PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], value: 105)
+    │   └─ ← [Return] true
+    ├─ [197691] NewEraHook::placeLimitOrder(PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), 100, 105, 100, false)
+    │   ├─ [2766] MockERC20::name() [staticcall]
+    │   │   └─ ← [Return] "TEST"
+    │   ├─ [5250] PriceOracle::getLatestPrice("TEST") [staticcall]
+    │   │   └─ ← [Return] 100
+    │   ├─ [25316] MockERC20::transferFrom(0x0000000000000000000000000000000000000123, NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], 105)
+    │   │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000123, to: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], value: 105)
+    │   │   └─ ← [Return] true
+    │   ├─ emit LimitOrderPlaced(poolId: 0x69b3ee87d25191b43923b3104db503ce56544fbbc8fd0ad0c88faa01b9c73814, user: 0x0000000000000000000000000000000000000123, orderId: 0, amount: 100, oraclePrice: 100, tolerance: 100)
+    │   └─ ← [Stop]
+    ├─ [552] MockERC20::balanceOf(0x0000000000000000000000000000000000000123) [staticcall]
+    │   └─ ← [Return] 0
+    ├─ [27669] NewEraHook::cancelLimitOrder(PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), 0x0000000000000000000000000000000000000123, 0)
+    │   ├─ [22811] MockERC20::transfer(0x0000000000000000000000000000000000000123, 105)
+    │   │   ├─ emit Transfer(from: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], to: 0x0000000000000000000000000000000000000123, value: 105)
+    │   │   └─ ← [Return] true
+    │   ├─ emit LimitOrderCancelled(poolId: 0x69b3ee87d25191b43923b3104db503ce56544fbbc8fd0ad0c88faa01b9c73814, user: 0x0000000000000000000000000000000000000123, orderId: 0, amount: 0)
+    │   └─ ← [Stop]
+    ├─ [1353] NewEraHook::limitOrders(0x69b3ee87d25191b43923b3104db503ce56544fbbc8fd0ad0c88faa01b9c73814, 0x0000000000000000000000000000000000000123, 0) [staticcall]
+    │   └─ ← [Return] 0x0000000000000000000000000000000000000000, 0, 0, 0, 0, false, false, false
+    ├─ [0] VM::assertFalse(false, "Order should be inactive after cancellation") [staticcall]
+    │   └─ ← [Return]
+    ├─ [552] MockERC20::balanceOf(0x0000000000000000000000000000000000000123) [staticcall]
+    │   └─ ← [Return] 105
+    ├─ [0] VM::assertEq(105, 105, "Tokens should be returned") [staticcall]
+    │   └─ ← [Return]
+    ├─ [0] VM::stopPrank()
+    │   └─ ← [Return]
+    └─ ← [Return]
+
+[PASS] test_limitOrderExecution() (gas: 545426)
+Logs:
+  === _executeLimitOrder ===
+  Order amount: 200
+  Order totalAmount: 210
+  Order zeroForOne: false
+  Swap params amountSpecified: 200
+  Swap delta amount0: 0
+  Swap delta amount1: 0
+
+Traces:
+  [565326] NewEraHookBasicTest::test_limitOrderExecution()
+    ├─ [0] VM::startPrank(0x0000000000000000000000000000000000000123)
+    │   └─ ← [Return]
+    ├─ [29398] MockERC20::mint(0x0000000000000000000000000000000000000123, 400)
+    │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000000, to: 0x0000000000000000000000000000000000000123, value: 400)
+    │   └─ ← [Stop]
+    ├─ [29398] MockERC20::mint(0x0000000000000000000000000000000000000123, 400)
+    │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000000, to: 0x0000000000000000000000000000000000000123, value: 400)
+    │   └─ ← [Stop]
+    ├─ [24305] MockERC20::approve(NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   ├─ emit Approval(owner: 0x0000000000000000000000000000000000000123, spender: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], value: 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   └─ ← [Return] true
+    ├─ [24305] MockERC20::approve(NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   ├─ emit Approval(owner: 0x0000000000000000000000000000000000000123, spender: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], value: 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   └─ ← [Return] true
+    ├─ [24305] MockERC20::approve(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   ├─ emit Approval(owner: 0x0000000000000000000000000000000000000123, spender: PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], value: 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   └─ ← [Return] true
+    ├─ [24305] MockERC20::approve(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   ├─ emit Approval(owner: 0x0000000000000000000000000000000000000123, spender: PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], value: 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   └─ ← [Return] true
+    ├─ [906] NewEraHook::calculateOrderAmounts(200, PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 })) [staticcall]
+    │   └─ ← [Return] 200, 210
+    ├─ [5250] PriceOracle::getLatestPrice("TEST") [staticcall]
+    │   └─ ← [Return] 100
+    ├─ [2698] MockERC20::mint(0x0000000000000000000000000000000000000123, 210)
+    │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000000, to: 0x0000000000000000000000000000000000000123, value: 210)
+    │   └─ ← [Stop]
+    ├─ [2305] MockERC20::approve(NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], 210)
+    │   ├─ emit Approval(owner: 0x0000000000000000000000000000000000000123, spender: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], value: 210)
+    │   └─ ← [Return] true
+    ├─ [2305] MockERC20::approve(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], 210)
+    │   ├─ emit Approval(owner: 0x0000000000000000000000000000000000000123, spender: PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], value: 210)
+    │   └─ ← [Return] true
+    ├─ [0] VM::stopPrank()
+    │   └─ ← [Return]
+    ├─ [24305] MockERC20::approve(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], 210)
+    │   ├─ emit Approval(owner: NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], spender: PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], value: 210)
+    │   └─ ← [Return] true
+    ├─ [0] VM::startPrank(0x0000000000000000000000000000000000000123)
+    │   └─ ← [Return]
+    ├─ [191191] NewEraHook::placeLimitOrder(PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), 200, 210, 100, false)
+    │   ├─ [2766] MockERC20::name() [staticcall]
+    │   │   └─ ← [Return] "TEST"
+    │   ├─ [1250] PriceOracle::getLatestPrice("TEST") [staticcall]
+    │   │   └─ ← [Return] 100
+    │   ├─ [25316] MockERC20::transferFrom(0x0000000000000000000000000000000000000123, NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], 210)
+    │   │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000123, to: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], value: 210)
+    │   │   └─ ← [Return] true
+    │   ├─ emit LimitOrderPlaced(poolId: 0x69b3ee87d25191b43923b3104db503ce56544fbbc8fd0ad0c88faa01b9c73814, user: 0x0000000000000000000000000000000000000123, orderId: 0, amount: 200, oraclePrice: 100, tolerance: 100)
+    │   └─ ← [Stop]
+    ├─ [1353] NewEraHook::limitOrders(0x69b3ee87d25191b43923b3104db503ce56544fbbc8fd0ad0c88faa01b9c73814, 0x0000000000000000000000000000000000000123, 0) [staticcall]
+    │   └─ ← [Return] 0x0000000000000000000000000000000000000123, 200, 210, 100, 100, false, true, true
+    ├─ [0] VM::assertTrue(true, "Limit order should be created and active") [staticcall]
+    │   └─ ← [Return]
+    ├─ [0] VM::assertFalse(false, "Should be a buy order") [staticcall]
+    │   └─ ← [Return]
+    ├─ [0] VM::assertEq(210, 210, "Total amount should match") [staticcall]
+    │   └─ ← [Return]
+    ├─ [0] VM::assertEq(100, 100, "Tolerance should match") [staticcall]
+    │   └─ ← [Return]
+    ├─ [0] VM::stopPrank()
+    │   └─ ← [Return]
+    ├─ [118962] PoolSwapTest::swap(PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), SwapParams({ zeroForOne: false, amountSpecified: 1000000000000000000 [1e18], sqrtPriceLimitX96: 83290069058676223003182343270 [8.329e28] }), TestSettings({ takeClaims: true, settleUsingBurn: false }), 0x0000000000000000000000000000000000000000000000000000000000000123)
+    │   ├─ [113139] PoolManager::unlock(0x00000000000000000000000000000000000000000000000000000000000000200000000000000000000000007fa9385be102ac3eac297483dd6233d62b3e14960000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000015cf58144ef33af1e14b5208015d11f9143e27b9000000000000000000000000212224d2f2d262cd093ee13240ca4873fccbba3c00000000000000000000000000000000000000000000000000000000000001f4000000000000000000000000000000000000000000000000000000000000000a00000000000000000000000004fcade49733395d6dfcb6bc998dcfe8e15ee8c000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000de0b6b3a764000000000000000000000000000000000000000000010d1fee2afe8561359d69a466000000000000000000000000000000000000000000000000000000000000018000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000123)
+    │   │   ├─ [110874] PoolSwapTest::unlockCallback(0x00000000000000000000000000000000000000000000000000000000000000200000000000000000000000007fa9385be102ac3eac297483dd6233d62b3e14960000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000015cf58144ef33af1e14b5208015d11f9143e27b9000000000000000000000000212224d2f2d262cd093ee13240ca4873fccbba3c00000000000000000000000000000000000000000000000000000000000001f4000000000000000000000000000000000000000000000000000000000000000a00000000000000000000000004fcade49733395d6dfcb6bc998dcfe8e15ee8c000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000de0b6b3a764000000000000000000000000000000000000000000010d1fee2afe8561359d69a466000000000000000000000000000000000000000000000000000000000000018000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000123)
+    │   │   │   ├─ [2552] MockERC20::balanceOf(NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496]) [staticcall]
+    │   │   │   │   └─ ← [Return] 57896044618658097711785492504343953926634992332820282019728792003956564819968 [5.789e76]
+    │   │   │   ├─ [2552] MockERC20::balanceOf(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f]) [staticcall]
+    │   │   │   │   └─ ← [Return] 0
+    │   │   │   ├─ [862] PoolManager::exttload(0x85be7c2bd5cfd9e6e3a30072d5be012f0c0649c579d3433f4d5ee458bdb429be) [staticcall]
+    │   │   │   │   └─ ← [Return] 0x0000000000000000000000000000000000000000000000000000000000000000
+    │   │   │   ├─ [2552] MockERC20::balanceOf(NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496]) [staticcall]
+    │   │   │   │   └─ ← [Return] 57896044618658097711785492504343953926634992332820282019728792003956564819968 [5.789e76]
+    │   │   │   ├─ [2552] MockERC20::balanceOf(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f]) [staticcall]
+    │   │   │   │   └─ ← [Return] 0
+    │   │   │   ├─ [862] PoolManager::exttload(0xec1690143798fa6d9be0e2ae9987311729015febf65e065811da6492f94dd07b) [staticcall]
+    │   │   │   │   └─ ← [Return] 0x0000000000000000000000000000000000000000000000000000000000000000
+    │   │   │   ├─ [85344] PoolManager::swap(PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), SwapParams({ zeroForOne: false, amountSpecified: 1000000000000000000 [1e18], sqrtPriceLimitX96: 83290069058676223003182343270 [8.329e28] }), 0x0000000000000000000000000000000000000000000000000000000000000123)
+    │   │   │   │   ├─ [60557] NewEraHook::beforeSwap(PoolSwapTest: [0x2e234DAe75C793f67A35089C9d99245E1C58470b], PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), SwapParams({ zeroForOne: false, amountSpecified: 1000000000000000000 [1e18], sqrtPriceLimitX96: 83290069058676223003182343270 [8.329e28] }), 0x0000000000000000000000000000000000000000000000000000000000000123)
+    │   │   │   │   │   ├─ [2378] PoolManager::extsload(0x0825676e9b33ad3f7c67c3de6d9923b0d0bdb7557b274a92f9d56f76cf384f2d) [staticcall]
+    │   │   │   │   │   │   └─ ← [Return] 0x0000000000000000000000000000000000000000000000000000000000000000
+    │   │   │   │   │   ├─ [2378] PoolManager::extsload(0x4db038090f7a8b626de736d9f85127228dfb547626f5c9f914f7d8ff079d41f6) [staticcall]
+    │   │   │   │   │   │   └─ ← [Return] 0x0000000000000000000000000000000000000000000000000000000000000000
+    │   │   │   │   │   ├─ [766] MockERC20::name() [staticcall]
+    │   │   │   │   │   │   └─ ← [Return] "TEST"
+    │   │   │   │   │   ├─ [1250] PriceOracle::getLatestPrice("TEST") [staticcall]
+    │   │   │   │   │   │   └─ ← [Return] 100
+    │   │   │   │   │   ├─ [766] MockERC20::name() [staticcall]
+    │   │   │   │   │   │   └─ ← [Return] "TEST"
+    │   │   │   │   │   ├─ [1250] PriceOracle::getLatestPrice("TEST") [staticcall]
+    │   │   │   │   │   │   └─ ← [Return] 100
+    │   │   │   │   │   ├─ [0] console::log("=== _executeLimitOrder ===") [staticcall]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [0] console::log("Order amount:", 200) [staticcall]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [0] console::log("Order totalAmount:", 210) [staticcall]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [0] console::log("Order zeroForOne:", false) [staticcall]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [0] console::log("Swap params amountSpecified:", 200) [staticcall]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [22647] PoolManager::swap(PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), SwapParams({ zeroForOne: false, amountSpecified: 200, sqrtPriceLimitX96: 79232123823359799118286999568 [7.923e28] }), 0x)
+    │   │   │   │   │   │   ├─ emit Swap(id: 0x69b3ee87d25191b43923b3104db503ce56544fbbc8fd0ad0c88faa01b9c73814, sender: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], amount0: 0, amount1: 0, sqrtPriceX96: 79232123823359799118286999568 [7.923e28], liquidity: 0, tick: 1, fee: 500)
+    │   │   │   │   │   │   └─ ← [Return] 0
+    │   │   │   │   │   ├─ [0] console::log("Swap delta amount0:", 0) [staticcall]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ [0] console::log("Swap delta amount1:", 0) [staticcall]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   ├─ emit LimitOrderExecuted(poolId: 0x69b3ee87d25191b43923b3104db503ce56544fbbc8fd0ad0c88faa01b9c73814, user: 0x0000000000000000000000000000000000000123, orderId: 0, amount: 200, executionPrice: 0)
+    │   │   │   │   │   ├─ emit LimitOrderExecuted(poolId: 0x69b3ee87d25191b43923b3104db503ce56544fbbc8fd0ad0c88faa01b9c73814, user: 0x0000000000000000000000000000000000000123, orderId: 0, amount: 200, executionPrice: 1105165392603232697 [1.105e18])
+    │   │   │   │   │   └─ ← [Return] 0x575e24b4, 0, 0
+    │   │   │   │   ├─ emit Swap(id: 0x69b3ee87d25191b43923b3104db503ce56544fbbc8fd0ad0c88faa01b9c73814, sender: PoolSwapTest: [0x2e234DAe75C793f67A35089C9d99245E1C58470b], amount0: 0, amount1: 0, sqrtPriceX96: 83290069058676223003182343270 [8.329e28], liquidity: 0, tick: 1000, fee: 500)
+    │   │   │   │   ├─ [6081] NewEraHook::afterSwap(PoolSwapTest: [0x2e234DAe75C793f67A35089C9d99245E1C58470b], PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), SwapParams({ zeroForOne: false, amountSpecified: 1000000000000000000 [1e18], sqrtPriceLimitX96: 83290069058676223003182343270 [8.329e28] }), 0, 0x0000000000000000000000000000000000000000000000000000000000000123)
+    │   │   │   │   │   ├─ [766] MockERC20::name() [staticcall]
+    │   │   │   │   │   │   └─ ← [Return] "TEST"
+    │   │   │   │   │   ├─ [1250] PriceOracle::getLatestPrice("TEST") [staticcall]
+    │   │   │   │   │   │   └─ ← [Return] 100
+    │   │   │   │   │   └─ ← [Return] 0xb47b2fb1, 0
+    │   │   │   │   └─ ← [Return] 0
+    │   │   │   ├─ [552] MockERC20::balanceOf(NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496]) [staticcall]
+    │   │   │   │   └─ ← [Return] 57896044618658097711785492504343953926634992332820282019728792003956564819968 [5.789e76]
+    │   │   │   ├─ [552] MockERC20::balanceOf(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f]) [staticcall]
+    │   │   │   │   └─ ← [Return] 0
+    │   │   │   ├─ [862] PoolManager::exttload(0x85be7c2bd5cfd9e6e3a30072d5be012f0c0649c579d3433f4d5ee458bdb429be) [staticcall]
+    │   │   │   │   └─ ← [Return] 0x0000000000000000000000000000000000000000000000000000000000000000
+    │   │   │   ├─ [552] MockERC20::balanceOf(NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496]) [staticcall]
+    │   │   │   │   └─ ← [Return] 57896044618658097711785492504343953926634992332820282019728792003956564819968 [5.789e76]
+    │   │   │   ├─ [552] MockERC20::balanceOf(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f]) [staticcall]
+    │   │   │   │   └─ ← [Return] 0
+    │   │   │   ├─ [862] PoolManager::exttload(0xec1690143798fa6d9be0e2ae9987311729015febf65e065811da6492f94dd07b) [staticcall]
+    │   │   │   │   └─ ← [Return] 0x0000000000000000000000000000000000000000000000000000000000000000
+    │   │   │   └─ ← [Return] 0x0000000000000000000000000000000000000000000000000000000000000000
+    │   │   └─ ← [Return] 0x0000000000000000000000000000000000000000000000000000000000000000
+    │   └─ ← [Return] 0
+    ├─ [1353] NewEraHook::limitOrders(0x69b3ee87d25191b43923b3104db503ce56544fbbc8fd0ad0c88faa01b9c73814, 0x0000000000000000000000000000000000000123, 0) [staticcall]
+    │   └─ ← [Return] 0x0000000000000000000000000000000000000123, 200, 210, 100, 100, false, false, true
+    ├─ [0] VM::assertFalse(false, "Limit order should be executed and inactive") [staticcall]
+    │   └─ ← [Return]
+    └─ ← [Return]
+
+[PASS] test_placeLimitOrder() (gas: 396606)
+Traces:
+  [396606] NewEraHookBasicTest::test_placeLimitOrder()
+    ├─ [0] VM::startPrank(0x0000000000000000000000000000000000000123)
+    │   └─ ← [Return]
+    ├─ [29398] MockERC20::mint(0x0000000000000000000000000000000000000123, 200)
+    │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000000, to: 0x0000000000000000000000000000000000000123, value: 200)
+    │   └─ ← [Stop]
+    ├─ [29398] MockERC20::mint(0x0000000000000000000000000000000000000123, 200)
+    │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000000, to: 0x0000000000000000000000000000000000000123, value: 200)
+    │   └─ ← [Stop]
+    ├─ [24305] MockERC20::approve(NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   ├─ emit Approval(owner: 0x0000000000000000000000000000000000000123, spender: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], value: 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   └─ ← [Return] true
+    ├─ [24305] MockERC20::approve(NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   ├─ emit Approval(owner: 0x0000000000000000000000000000000000000123, spender: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], value: 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   └─ ← [Return] true
+    ├─ [24305] MockERC20::approve(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   ├─ emit Approval(owner: 0x0000000000000000000000000000000000000123, spender: PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], value: 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   └─ ← [Return] true
+    ├─ [24305] MockERC20::approve(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   ├─ emit Approval(owner: 0x0000000000000000000000000000000000000123, spender: PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], value: 115792089237316195423570985008687907853269984665640564039457584007913129639935 [1.157e77])
+    │   └─ ← [Return] true
+    ├─ [906] NewEraHook::calculateOrderAmounts(100, PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 })) [staticcall]
+    │   └─ ← [Return] 100, 105
+    ├─ [197369] NewEraHook::placeLimitOrder(PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), 100, 105, 100, true)
+    │   ├─ [2766] MockERC20::name() [staticcall]
+    │   │   └─ ← [Return] "TEST"
+    │   ├─ [5250] PriceOracle::getLatestPrice("TEST") [staticcall]
+    │   │   └─ ← [Return] 100
+    │   ├─ [25007] MockERC20::transferFrom(0x0000000000000000000000000000000000000123, NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], 105)
+    │   │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000123, to: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], value: 105)
+    │   │   └─ ← [Return] true
+    │   ├─ emit LimitOrderPlaced(poolId: 0x69b3ee87d25191b43923b3104db503ce56544fbbc8fd0ad0c88faa01b9c73814, user: 0x0000000000000000000000000000000000000123, orderId: 0, amount: 100, oraclePrice: 100, tolerance: 100)
+    │   └─ ← [Stop]
+    ├─ [1353] NewEraHook::limitOrders(0x69b3ee87d25191b43923b3104db503ce56544fbbc8fd0ad0c88faa01b9c73814, 0x0000000000000000000000000000000000000123, 0) [staticcall]
+    │   └─ ← [Return] 0x0000000000000000000000000000000000000123, 100, 105, 100, 100, true, true, true
+    ├─ [0] VM::assertEq(0x0000000000000000000000000000000000000123, 0x0000000000000000000000000000000000000123, "Incorrect order user") [staticcall]
+    │   └─ ← [Return]
+    ├─ [0] VM::assertEq(100, 100, "Incorrect order amount") [staticcall]
+    │   └─ ← [Return]
+    ├─ [0] VM::assertEq(100, 100, "Incorrect tolerance") [staticcall]
+    │   └─ ← [Return]
+    ├─ [0] VM::assertEq(true, true, "Incorrect zeroForOne") [staticcall]
+    │   └─ ← [Return]
+    ├─ [0] VM::assertTrue(true, "Order should be active") [staticcall]
+    │   └─ ← [Return]
+    ├─ [0] VM::assertTrue(true, "Tokens should be transferred") [staticcall]
+    │   └─ ← [Return]
+    ├─ [0] VM::stopPrank()
+    │   └─ ← [Return]
+    └─ ← [Return]
+
+[PASS] test_updateLimitOrder() (gas: 284271)
+Traces:
+  [324071] NewEraHookBasicTest::test_updateLimitOrder()
+    ├─ [0] VM::startPrank(0x0000000000000000000000000000000000000123)
+    │   └─ ← [Return]
+    ├─ [906] NewEraHook::calculateOrderAmounts(100, PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 })) [staticcall]
+    │   └─ ← [Return] 100, 105
+    ├─ [29398] MockERC20::mint(0x0000000000000000000000000000000000000123, 105)
+    │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000000, to: 0x0000000000000000000000000000000000000123, value: 105)
+    │   └─ ← [Stop]
+    ├─ [24305] MockERC20::approve(NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], 105)
+    │   ├─ emit Approval(owner: 0x0000000000000000000000000000000000000123, spender: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], value: 105)
+    │   └─ ← [Return] true
+    ├─ [24305] MockERC20::approve(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], 105)
+    │   ├─ emit Approval(owner: 0x0000000000000000000000000000000000000123, spender: PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], value: 105)
+    │   └─ ← [Return] true
+    ├─ [197691] NewEraHook::placeLimitOrder(PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), 100, 105, 100, false)
+    │   ├─ [2766] MockERC20::name() [staticcall]
+    │   │   └─ ← [Return] "TEST"
+    │   ├─ [5250] PriceOracle::getLatestPrice("TEST") [staticcall]
+    │   │   └─ ← [Return] 100
+    │   ├─ [25316] MockERC20::transferFrom(0x0000000000000000000000000000000000000123, NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], 105)
+    │   │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000123, to: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], value: 105)
+    │   │   └─ ← [Return] true
+    │   ├─ emit LimitOrderPlaced(poolId: 0x69b3ee87d25191b43923b3104db503ce56544fbbc8fd0ad0c88faa01b9c73814, user: 0x0000000000000000000000000000000000000123, orderId: 0, amount: 100, oraclePrice: 100, tolerance: 100)
+    │   └─ ← [Stop]
+    ├─ [1353] NewEraHook::limitOrders(0x69b3ee87d25191b43923b3104db503ce56544fbbc8fd0ad0c88faa01b9c73814, 0x0000000000000000000000000000000000000123, 0) [staticcall]
+    │   └─ ← [Return] 0x0000000000000000000000000000000000000123, 100, 105, 100, 100, false, true, true
+    ├─ [0] VM::assertEq(100, 100, "Initial amount should match") [staticcall]
+    │   └─ ← [Return]
+    ├─ [0] VM::assertEq(100, 100, "Initial tolerance should match") [staticcall]
+    │   └─ ← [Return]
+    ├─ [0] VM::assertTrue(true, "Order should be active") [staticcall]
+    │   └─ ← [Return]
+    ├─ [4591] NewEraHook::updateLimitOrder(PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), 0x0000000000000000000000000000000000000123, 0, 200, 200)
+    │   ├─ emit LimitOrderPlaced(poolId: 0x69b3ee87d25191b43923b3104db503ce56544fbbc8fd0ad0c88faa01b9c73814, user: 0x0000000000000000000000000000000000000123, orderId: 0, amount: 200, oraclePrice: 100, tolerance: 200)
+    │   └─ ← [Stop]
+    ├─ [1353] NewEraHook::limitOrders(0x69b3ee87d25191b43923b3104db503ce56544fbbc8fd0ad0c88faa01b9c73814, 0x0000000000000000000000000000000000000123, 0) [staticcall]
+    │   └─ ← [Return] 0x0000000000000000000000000000000000000123, 200, 210, 100, 200, false, true, true
+    ├─ [0] VM::assertEq(200, 200, "Amount should be updated") [staticcall]
+    │   └─ ← [Return]
+    ├─ [0] VM::assertEq(200, 200, "Tolerance should be updated") [staticcall]
+    │   └─ ← [Return]
+    ├─ [0] VM::assertTrue(true, "Order should still be active") [staticcall]
+    │   └─ ← [Return]
+    ├─ [906] NewEraHook::calculateOrderAmounts(200, PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 })) [staticcall]
+    │   └─ ← [Return] 200, 210
+    ├─ [0] VM::assertEq(210, 210, "Total amount should be updated correctly") [staticcall]
+    │   └─ ← [Return]
+    ├─ [0] VM::stopPrank()
+    │   └─ ← [Return]
+    └─ ← [Return]
+
+[PASS] test_withdrawFunds() (gas: 260263)
+Traces:
+  [319963] NewEraHookBasicTest::test_withdrawFunds()
+    ├─ [0] VM::startPrank(0x0000000000000000000000000000000000000123)
+    │   └─ ← [Return]
+    ├─ [906] NewEraHook::calculateOrderAmounts(100, PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 })) [staticcall]
+    │   └─ ← [Return] 100, 105
+    ├─ [29398] MockERC20::mint(0x0000000000000000000000000000000000000123, 105)
+    │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000000, to: 0x0000000000000000000000000000000000000123, value: 105)
+    │   └─ ← [Stop]
+    ├─ [24305] MockERC20::approve(NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], 105)
+    │   ├─ emit Approval(owner: 0x0000000000000000000000000000000000000123, spender: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], value: 105)
+    │   └─ ← [Return] true
+    ├─ [24305] MockERC20::approve(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], 105)
+    │   ├─ emit Approval(owner: 0x0000000000000000000000000000000000000123, spender: PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], value: 105)
+    │   └─ ← [Return] true
+    ├─ [197691] NewEraHook::placeLimitOrder(PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), 100, 105, 100, false)
+    │   ├─ [2766] MockERC20::name() [staticcall]
+    │   │   └─ ← [Return] "TEST"
+    │   ├─ [5250] PriceOracle::getLatestPrice("TEST") [staticcall]
+    │   │   └─ ← [Return] 100
+    │   ├─ [25316] MockERC20::transferFrom(0x0000000000000000000000000000000000000123, NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], 105)
+    │   │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000123, to: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], value: 105)
+    │   │   └─ ← [Return] true
+    │   ├─ emit LimitOrderPlaced(poolId: 0x69b3ee87d25191b43923b3104db503ce56544fbbc8fd0ad0c88faa01b9c73814, user: 0x0000000000000000000000000000000000000123, orderId: 0, amount: 100, oraclePrice: 100, tolerance: 100)
+    │   └─ ← [Stop]
+    ├─ [0] VM::stopPrank()
+    │   └─ ← [Return]
+    ├─ [552] MockERC20::balanceOf(NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0]) [staticcall]
+    │   └─ ← [Return] 105
+    ├─ [2552] MockERC20::balanceOf(NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496]) [staticcall]
+    │   └─ ← [Return] 57896044618658097711785492504343953926634992332820282019728792003956564819968 [5.789e76]
+    ├─ [7606] NewEraHook::withdrawFunds(MockERC20: [0x212224D2F2d262cd093eE13240ca4873fcCBbA3C])
+    │   ├─ [552] MockERC20::balanceOf(NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0]) [staticcall]
+    │   │   └─ ← [Return] 105
+    │   ├─ [5711] MockERC20::transfer(NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], 105)
+    │   │   ├─ emit Transfer(from: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], to: NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], value: 105)
+    │   │   └─ ← [Return] true
+    │   └─ ← [Stop]
+    ├─ [552] MockERC20::balanceOf(NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0]) [staticcall]
+    │   └─ ← [Return] 0
+    ├─ [552] MockERC20::balanceOf(NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496]) [staticcall]
+    │   └─ ← [Return] 57896044618658097711785492504343953926634992332820282019728792003956564820073 [5.789e76]
+    ├─ [0] VM::assertEq(0, 0, "Hook should have 0 tokens after withdrawal") [staticcall]
+    │   └─ ← [Return]
+    ├─ [0] VM::assertEq(57896044618658097711785492504343953926634992332820282019728792003956564820073 [5.789e76], 57896044618658097711785492504343953926634992332820282019728792003956564820073 [5.789e76], "Admin should receive all tokens") [staticcall]
+    │   └─ ← [Return]
+    └─ ← [Return]
+
+[PASS] test_withdrawFundsMultipleTokens() (gas: 472479)
+Traces:
+  [591879] NewEraHookBasicTest::test_withdrawFundsMultipleTokens()
+    ├─ [0] VM::startPrank(0x0000000000000000000000000000000000000123)
+    │   └─ ← [Return]
+    ├─ [906] NewEraHook::calculateOrderAmounts(100, PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 })) [staticcall]
+    │   └─ ← [Return] 100, 105
+    ├─ [29398] MockERC20::mint(0x0000000000000000000000000000000000000123, 105)
+    │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000000, to: 0x0000000000000000000000000000000000000123, value: 105)
+    │   └─ ← [Stop]
+    ├─ [24305] MockERC20::approve(NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], 105)
+    │   ├─ emit Approval(owner: 0x0000000000000000000000000000000000000123, spender: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], value: 105)
+    │   └─ ← [Return] true
+    ├─ [24305] MockERC20::approve(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], 105)
+    │   ├─ emit Approval(owner: 0x0000000000000000000000000000000000000123, spender: PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], value: 105)
+    │   └─ ← [Return] true
+    ├─ [197691] NewEraHook::placeLimitOrder(PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), 100, 105, 100, false)
+    │   ├─ [2766] MockERC20::name() [staticcall]
+    │   │   └─ ← [Return] "TEST"
+    │   ├─ [5250] PriceOracle::getLatestPrice("TEST") [staticcall]
+    │   │   └─ ← [Return] 100
+    │   ├─ [25316] MockERC20::transferFrom(0x0000000000000000000000000000000000000123, NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], 105)
+    │   │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000123, to: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], value: 105)
+    │   │   └─ ← [Return] true
+    │   ├─ emit LimitOrderPlaced(poolId: 0x69b3ee87d25191b43923b3104db503ce56544fbbc8fd0ad0c88faa01b9c73814, user: 0x0000000000000000000000000000000000000123, orderId: 0, amount: 100, oraclePrice: 100, tolerance: 100)
+    │   └─ ← [Stop]
+    ├─ [906] NewEraHook::calculateOrderAmounts(100, PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 })) [staticcall]
+    │   └─ ← [Return] 100, 105
+    ├─ [29398] MockERC20::mint(0x0000000000000000000000000000000000000123, 105)
+    │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000000, to: 0x0000000000000000000000000000000000000123, value: 105)
+    │   └─ ← [Stop]
+    ├─ [24305] MockERC20::approve(NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], 105)
+    │   ├─ emit Approval(owner: 0x0000000000000000000000000000000000000123, spender: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], value: 105)
+    │   └─ ← [Return] true
+    ├─ [24305] MockERC20::approve(PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], 105)
+    │   ├─ emit Approval(owner: 0x0000000000000000000000000000000000000123, spender: PoolManager: [0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f], value: 105)
+    │   └─ ← [Return] true
+    ├─ [167278] NewEraHook::placeLimitOrder(PoolKey({ currency0: 0x15cF58144EF33af1e14b5208015d11F9143E27b9, currency1: 0x212224D2F2d262cd093eE13240ca4873fcCBbA3C, fee: 500, tickSpacing: 10, hooks: 0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0 }), 100, 105, 100, true)
+    │   ├─ [766] MockERC20::name() [staticcall]
+    │   │   └─ ← [Return] "TEST"
+    │   ├─ [1250] PriceOracle::getLatestPrice("TEST") [staticcall]
+    │   │   └─ ← [Return] 100
+    │   ├─ [25316] MockERC20::transferFrom(0x0000000000000000000000000000000000000123, NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], 105)
+    │   │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000123, to: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], value: 105)
+    │   │   └─ ← [Return] true
+    │   ├─ emit LimitOrderPlaced(poolId: 0x69b3ee87d25191b43923b3104db503ce56544fbbc8fd0ad0c88faa01b9c73814, user: 0x0000000000000000000000000000000000000123, orderId: 1, amount: 100, oraclePrice: 100, tolerance: 100)
+    │   └─ ← [Stop]
+    ├─ [0] VM::stopPrank()
+    │   └─ ← [Return]
+    ├─ [552] MockERC20::balanceOf(NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0]) [staticcall]
+    │   └─ ← [Return] 105
+    ├─ [552] MockERC20::balanceOf(NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0]) [staticcall]
+    │   └─ ← [Return] 105
+    ├─ [2552] MockERC20::balanceOf(NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496]) [staticcall]
+    │   └─ ← [Return] 57896044618658097711785492504343953926634992332820282019728792003956564819968 [5.789e76]
+    ├─ [2552] MockERC20::balanceOf(NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496]) [staticcall]
+    │   └─ ← [Return] 57896044618658097711785492504343953926634992332820282019728792003956564819968 [5.789e76]
+    ├─ [7606] NewEraHook::withdrawFunds(MockERC20: [0x15cF58144EF33af1e14b5208015d11F9143E27b9])
+    │   ├─ [552] MockERC20::balanceOf(NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0]) [staticcall]
+    │   │   └─ ← [Return] 105
+    │   ├─ [5711] MockERC20::transfer(NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], 105)
+    │   │   ├─ emit Transfer(from: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], to: NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], value: 105)
+    │   │   └─ ← [Return] true
+    │   └─ ← [Stop]
+    ├─ [552] MockERC20::balanceOf(NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0]) [staticcall]
+    │   └─ ← [Return] 0
+    ├─ [552] MockERC20::balanceOf(NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496]) [staticcall]
+    │   └─ ← [Return] 57896044618658097711785492504343953926634992332820282019728792003956564820073 [5.789e76]
+    ├─ [0] VM::assertEq(0, 0, "Hook should have 0 token0 after withdrawal") [staticcall]
+    │   └─ ← [Return]
+    ├─ [0] VM::assertEq(57896044618658097711785492504343953926634992332820282019728792003956564820073 [5.789e76], 57896044618658097711785492504343953926634992332820282019728792003956564820073 [5.789e76], "Admin should receive all token0") [staticcall]
+    │   └─ ← [Return]
+    ├─ [7606] NewEraHook::withdrawFunds(MockERC20: [0x212224D2F2d262cd093eE13240ca4873fcCBbA3C])
+    │   ├─ [552] MockERC20::balanceOf(NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0]) [staticcall]
+    │   │   └─ ← [Return] 105
+    │   ├─ [5711] MockERC20::transfer(NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], 105)
+    │   │   ├─ emit Transfer(from: NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0], to: NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], value: 105)
+    │   │   └─ ← [Return] true
+    │   └─ ← [Stop]
+    ├─ [552] MockERC20::balanceOf(NewEraHook: [0x04fcaDe49733395D6dFCB6bC998Dcfe8E15Ee8c0]) [staticcall]
+    │   └─ ← [Return] 0
+    ├─ [552] MockERC20::balanceOf(NewEraHookBasicTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496]) [staticcall]
+    │   └─ ← [Return] 57896044618658097711785492504343953926634992332820282019728792003956564820073 [5.789e76]
+    ├─ [0] VM::assertEq(0, 0, "Hook should have 0 token1 after withdrawal") [staticcall]
+    │   └─ ← [Return]
+    ├─ [0] VM::assertEq(57896044618658097711785492504343953926634992332820282019728792003956564820073 [5.789e76], 57896044618658097711785492504343953926634992332820282019728792003956564820073 [5.789e76], "Admin should receive all token1") [staticcall]
+    │   └─ ← [Return]
+    └─ ← [Return]
+
+Suite result: FAILED. 15 passed; 1 failed; 0 skipped; finished in 2.50s (8.89ms CPU time)
+
+Ran 2 test suites in 6.95s (2.50s CPU time): 23 tests passed, 1 failed, 0 skipped (24 total tests)
+
+Failing tests:
+Encountered 1 failing test in test/HookBasic.t.sol:NewEraHookBasicTest
+[FAIL: panic: arithmetic underflow or overflow (0x11)] test_TWAMMOrderExecutionOverTime() (gas: 258265)
+
+Encountered a total of 1 failing tests, 23 tests succeeded

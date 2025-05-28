@@ -25,6 +25,7 @@ import {OrderPool} from "../src/libraries/TWAMM/OrderPool.sol";
 import {FixedPoint96} from "@uniswap/v4-core/src/libraries/FixedPoint96.sol";
 import {SqrtPriceMath} from "v4-core/src/libraries/SqrtPriceMath.sol";
 import {LiquidityMath} from "v4-core/src/libraries/LiquidityMath.sol";
+import {StateLibrary} from "v4-core/src/libraries/StateLibrary.sol";
 
 // =============================================
 // Contract Definition
@@ -382,6 +383,11 @@ contract NewEraHook is BaseHook, ITWAMM {
         PoolKey memory key,
         LimitOrder storage order
     ) internal {
+        console.log("=== _executeLimitOrder ===");
+        console.log("Order amount:", order.amount);
+        console.log("Order totalAmount:", order.totalAmount);
+        console.log("Order zeroForOne:", order.zeroForOne);
+
         uint256 swapAmount = order.amount;
 
         IPoolManager.SwapParams memory params = IPoolManager.SwapParams({
@@ -392,20 +398,28 @@ contract NewEraHook is BaseHook, ITWAMM {
                 : TickMath.getSqrtPriceAtTick(1)
         });
 
+        console.log("Swap params amountSpecified:", params.amountSpecified);
+        
         BalanceDelta delta = poolManager.swap(key, params, "");
+        console.log("Swap delta amount0:", delta.amount0());
+        console.log("Swap delta amount1:", delta.amount1());
 
         if (params.zeroForOne) {
             if (delta.amount0() < 0) {
+                console.log("Settling currency0 amount:", uint128(-delta.amount0()));
                 _settle(key.currency0, uint128(-delta.amount0()));
             }
             if (delta.amount1() > 0) {
+                console.log("Taking currency1 amount:", uint128(delta.amount1()));
                 _take(key.currency1, uint128(delta.amount1()));
             }
         } else {
             if (delta.amount1() < 0) {
+                console.log("Settling currency1 amount:", uint128(-delta.amount1()));
                 _settle(key.currency1, uint128(-delta.amount1()));
             }
             if (delta.amount0() > 0) {
+                console.log("Taking currency0 amount:", uint128(delta.amount0()));
                 _take(key.currency0, uint128(delta.amount0()));
             }
         }
@@ -489,10 +503,10 @@ contract NewEraHook is BaseHook, ITWAMM {
         uint256 expirationInterval,
         uint256 tolerance
     ) external returns (bytes32 orderId) {
-        // Log order parameters for debugging
-        console.log("submitTWAMMOrder - amountIn:", amountIn);
-        console.log("submitTWAMMOrder - expirationInterval:", expirationInterval);
-        console.log("submitTWAMMOrder - tolerance:", tolerance);
+        console.log("=== submitTWAMMOrder ===");
+        console.log("amountIn:", amountIn);
+        console.log("expirationInterval:", expirationInterval);
+        console.log("tolerance:", tolerance);
         
         // Validate tolerance is within acceptable range (max 100%)
         if (tolerance > 10_000) revert InvalidTolerance();
@@ -505,9 +519,9 @@ contract NewEraHook is BaseHook, ITWAMM {
 
         // Calculate duration and sell rate
         uint256 duration = orderKey.expiration - block.timestamp;
-        console.log("submitTWAMMOrder - duration:", duration);
+        console.log("duration:", duration);
         uint256 sellRate = amountIn / duration; // Rate at which tokens will be sold
-        console.log("submitTWAMMOrder - calculated sellRate:", sellRate);
+        console.log("calculated sellRate:", sellRate);
         
         // Submit the order to the TWAMM state
         orderId = _submitTWAMMOrder(twamm, orderKey, sellRate, expirationInterval, tolerance);
@@ -515,8 +529,20 @@ contract NewEraHook is BaseHook, ITWAMM {
         // Transfer tokens from user to contract
         Currency token = orderKey.zeroForOne ? key.currency0 : key.currency1;
         ERC20 tokenContract = ERC20(Currency.unwrap(token));
-        console.log("submitTWAMMOrder - transferring tokens:", amountIn);
+        
+        // Log balances before transfer
+        console.log("Sender balance before transfer:", tokenContract.balanceOf(msg.sender));
+        console.log("Contract balance before transfer:", tokenContract.balanceOf(address(this)));
+        console.log("Amount to transfer:", amountIn);
+        
+        // Check allowance
+        console.log("Allowance:", tokenContract.allowance(msg.sender, address(this)));
+        
         tokenContract.transferFrom(msg.sender, address(this), amountIn);
+        
+        // Log balances after transfer
+        console.log("Sender balance after transfer:", tokenContract.balanceOf(msg.sender));
+        console.log("Contract balance after transfer:", tokenContract.balanceOf(address(this)));
 
         // Emit event with order details
         emit SubmitOrder(
@@ -704,50 +730,97 @@ contract NewEraHook is BaseHook, ITWAMM {
     function executeTWAMMOrders(PoolKey memory key) public {
         PoolId poolId = key.toId();
         
-        // Load current pool state
-        bytes32 slot0 = poolManager.extsload(keccak256(abi.encode(poolId, 0)));
-        uint160 sqrtPriceX96 = uint160(uint256(slot0));
-        bytes32 slot1 = poolManager.extsload(keccak256(abi.encode(poolId, 1)));
-        uint128 liquidity = uint128(uint256(slot1));
+        // Load current pool state using StateLibrary
+        (uint160 sqrtPriceX96, int24 tick, uint24 protocolFee, uint24 lpFee) = StateLibrary.getSlot0(poolManager, poolId);
+        uint128 liquidity = StateLibrary.getLiquidity(poolManager, poolId);
         State storage twamm = twammStates[poolId];
+
+        console.log("=== executeTWAMMOrders ===");
+        console.log("Initial Token0 Balance:", ERC20(Currency.unwrap(key.currency0)).balanceOf(address(this)));
+        console.log("Initial Token1 Balance:", ERC20(Currency.unwrap(key.currency1)).balanceOf(address(this)));
 
         // Validate pool initialization
         if (twamm.lastVirtualOrderTimestamp == 0) revert NotInitialized();
-
-        // Get current price from oracle and calculate scaled price
-        uint256 latestOraclePrice = priceOracle.getLatestPrice(
-            ERC20(Currency.unwrap(key.currency1)).name()
-        );
-        uint256 scaledOraclePrice = (latestOraclePrice * 1e18) / 100;
-        uint256 currentPrice = (uint256(sqrtPriceX96) * uint256(sqrtPriceX96) * 1e18) >> 192;
 
         // Check if there are any active orders to execute
         if (twamm.orderPool0For1.sellRateCurrent > 0 || twamm.orderPool1For0.sellRateCurrent > 0) {
             // Create default order key for execution
             OrderKey memory orderKey = OrderKey({
                 owner: address(this),
-                expiration: block.timestamp + 3600, // 1 hour from now
+                expiration: block.timestamp + 3600,
                 zeroForOne: true
             });
 
-            // Get order tolerance and check if execution is allowed
-            Order storage order = _getTWAMMOrder(twamm, orderKey);
-            uint256 scaledTolerance = (order.tolerance * 1e18) / 10000;
-            uint256 priceLimit = scaledOraclePrice + scaledTolerance;
-            bool shouldExecute = currentPrice <= priceLimit;
+            // Execute orders and get new price
+            (bool zeroForOne, uint160 sqrtPriceLimitX96) =
+                _executeTWAMMOrders(twamm, poolManager, key, PoolParamsOnExecute(sqrtPriceX96, liquidity), orderKey);
 
-            if (shouldExecute) {
-                // Execute orders and get new price
-                (bool zeroForOne, uint160 sqrtPriceLimitX96) =
-                    _executeTWAMMOrders(twamm, poolManager, key, PoolParamsOnExecute(sqrtPriceX96, liquidity), orderKey);
+            console.log("After _executeTWAMMOrders:");
+            console.log("zeroForOne:", zeroForOne);
+            console.log("sqrtPriceLimitX96:", sqrtPriceLimitX96);
 
-                // If price changed, execute the swap
-                if (sqrtPriceLimitX96 != 0 && sqrtPriceLimitX96 != sqrtPriceX96) {
-                    // Calculate swap amount limit to prevent overflows
-                    int256 swapAmountLimit = -int256(zeroForOne ? key.currency0.balanceOfSelf() : key.currency1.balanceOfSelf());
-                    poolManager.unlock(abi.encode(key, IPoolManager.SwapParams(zeroForOne, swapAmountLimit, sqrtPriceLimitX96)));
+            // Execute the swap if we have a valid price
+            if (sqrtPriceLimitX96 != 0 && sqrtPriceLimitX96 != sqrtPriceX96) {
+                // Calculate swap amount based on current sell rate
+                uint256 sellRate = zeroForOne ? twamm.orderPool0For1.sellRateCurrent : twamm.orderPool1For0.sellRateCurrent;
+                uint256 timeElapsed = block.timestamp - twamm.lastVirtualOrderTimestamp;
+                int256 swapAmount = int256(sellRate * timeElapsed);
+                
+                console.log("Executing swap with amount:", swapAmount);
+                console.log("Sell rate:", sellRate);
+                console.log("Time elapsed:", timeElapsed);
+                
+                // Execute the swap
+                BalanceDelta delta = poolManager.swap(
+                    key,
+                    IPoolManager.SwapParams({
+                        zeroForOne: zeroForOne,
+                        amountSpecified: swapAmount,
+                        sqrtPriceLimitX96: sqrtPriceLimitX96
+                    }),
+                    ""
+                );
+
+                console.log("Swap delta amount0:", delta.amount0());
+                console.log("Swap delta amount1:", delta.amount1());
+
+                // Handle token transfers based on swap direction
+                if (zeroForOne) {
+                    // For token0 -> token1 swap
+                    if (delta.amount0() < 0) {
+                        console.log("Settling currency0 amount:", uint128(-delta.amount0()));
+                        _settle(key.currency0, uint128(-delta.amount0()));
+                    }
+                    if (delta.amount1() > 0) {
+                        console.log("Taking currency1 amount:", uint128(delta.amount1()));
+                        _take(key.currency1, uint128(delta.amount1()));
+                    }
+                } else {
+                    // For token1 -> token0 swap
+                    if (delta.amount1() < 0) {
+                        console.log("Settling currency1 amount:", uint128(-delta.amount1()));
+                        _settle(key.currency1, uint128(-delta.amount1()));
+                    }
+                    if (delta.amount0() > 0) {
+                        console.log("Taking currency0 amount:", uint128(delta.amount0()));
+                        _take(key.currency0, uint128(delta.amount0()));
+                    }
                 }
+
+                // Update tokens owed to users
+                if (zeroForOne) {
+                    tokensOwed[key.currency1][orderKey.owner] += uint256(uint128(delta.amount1()));
+                } else {
+                    tokensOwed[key.currency0][orderKey.owner] += uint256(uint128(delta.amount0()));
+                }
+
+                console.log("Final Token0 Balance:", ERC20(Currency.unwrap(key.currency0)).balanceOf(address(this)));
+                console.log("Final Token1 Balance:", ERC20(Currency.unwrap(key.currency1)).balanceOf(address(this)));
+            } else {
+                console.log("Swap not executed - invalid price conditions");
             }
+        } else {
+            console.log("No active orders to execute");
         }
     }
 
@@ -774,6 +847,39 @@ contract NewEraHook is BaseHook, ITWAMM {
             return (false, 0);
         }
 
+        // Get current price from oracle and calculate scaled price
+        uint256 latestOraclePrice = priceOracle.getLatestPrice(
+            ERC20(Currency.unwrap(key.currency1)).name()
+        );
+        uint256 scaledOraclePrice = (latestOraclePrice * 1e18) / 100;
+        
+        // Calculate current price safely to prevent overflow
+        uint256 currentPrice;
+        unchecked {
+            currentPrice = ((uint256(pool.sqrtPriceX96) * 1e18) / FixedPoint96.Q96) * uint256(pool.sqrtPriceX96);
+        }
+
+        console.log("=== _executeTWAMMOrders ===");
+        console.log("Current price:", currentPrice);
+        console.log("Oracle price:", scaledOraclePrice);
+        console.log("Pool sqrtPriceX96:", pool.sqrtPriceX96);
+
+        // Get order tolerance and check if execution is allowed
+        Order storage order = _getTWAMMOrder(self, orderKey);
+        uint256 scaledTolerance = (order.tolerance * 1e18) / 10000;
+        uint256 priceLimit = scaledOraclePrice + scaledTolerance;
+        bool shouldExecute = currentPrice <= priceLimit;
+
+        console.log("Order tolerance:", order.tolerance);
+        console.log("Scaled tolerance:", scaledTolerance);
+        console.log("Price limit:", priceLimit);
+        console.log("Should execute:", shouldExecute);
+
+        if (!shouldExecute) {
+            console.log("Not executing due to price conditions");
+            return (false, 0);
+        }
+
         uint160 initialSqrtPriceX96 = pool.sqrtPriceX96;
         uint256 prevTimestamp = self.lastVirtualOrderTimestamp;
         
@@ -783,6 +889,10 @@ contract NewEraHook is BaseHook, ITWAMM {
         OrderPool.State storage orderPool0For1 = self.orderPool0For1;
         OrderPool.State storage orderPool1For0 = self.orderPool1For0;
 
+        console.log("Order pool states:");
+        console.log("Pool0->1 sell rate:", orderPool0For1.sellRateCurrent);
+        console.log("Pool1->0 sell rate:", orderPool1For0.sellRateCurrent);
+
         // Process all orders up to current timestamp
         unchecked {
             while (nextExpirationTimestamp <= block.timestamp) {
@@ -791,6 +901,8 @@ contract NewEraHook is BaseHook, ITWAMM {
                     orderPool0For1.sellRateEndingAtInterval[nextExpirationTimestamp] > 0
                         || orderPool1For0.sellRateEndingAtInterval[nextExpirationTimestamp] > 0
                 ) {
+                    console.log("Processing orders at timestamp:", nextExpirationTimestamp);
+                    
                     // Execute orders based on pool state
                     if (orderPool0For1.sellRateCurrent != 0 && orderPool1For0.sellRateCurrent != 0) {
                         // Both pools have orders
@@ -827,6 +939,7 @@ contract NewEraHook is BaseHook, ITWAMM {
 
             // Process remaining time if there are still orders
             if (prevTimestamp < block.timestamp && _hasOutstandingOrders(self)) {
+                console.log("Processing remaining time");
                 if (orderPool0For1.sellRateCurrent != 0 && orderPool1For0.sellRateCurrent != 0) {
                     pool = _advanceToNewTimestamp(
                         self,
@@ -853,6 +966,10 @@ contract NewEraHook is BaseHook, ITWAMM {
         self.lastVirtualOrderTimestamp = block.timestamp;
         newSqrtPriceX96 = pool.sqrtPriceX96;
         zeroForOne = initialSqrtPriceX96 > newSqrtPriceX96;
+
+        console.log("Final results:");
+        console.log("New sqrtPriceX96:", newSqrtPriceX96);
+        console.log("Zero for one:", zeroForOne);
     }
 
     /**
@@ -867,15 +984,20 @@ contract NewEraHook is BaseHook, ITWAMM {
         PoolKey memory poolKey,
         AdvanceParams memory params
     ) private returns (PoolParamsOnExecute memory) {
+        console.log("=== _advanceToNewTimestamp ===");
+        console.log("Initial price:", params.pool.sqrtPriceX96);
+        console.log("Initial liquidity:", params.pool.liquidity);
+        console.log("Time elapsed:", params.secondsElapsed);
+        
         uint160 finalSqrtPriceX96;
-        // Convert seconds to Q96 format for precise calculations
         uint256 secondsElapsedX96 = params.secondsElapsed * FixedPoint96.Q96;
 
         OrderPool.State storage orderPool0For1 = self.orderPool0For1;
         OrderPool.State storage orderPool1For0 = self.orderPool1For0;
+        
+        console.log("Sell rates - Pool0:", orderPool0For1.sellRateCurrent, "Pool1:", orderPool1For0.sellRateCurrent);
 
         while (true) {
-            // Calculate new price based on current state and elapsed time
             TwammMath.ExecutionUpdateParams memory executionParams = TwammMath.ExecutionUpdateParams(
                 secondsElapsedX96,
                 params.pool.sqrtPriceX96,
@@ -885,34 +1007,30 @@ contract NewEraHook is BaseHook, ITWAMM {
             );
 
             finalSqrtPriceX96 = TwammMath.getNewSqrtPriceX96(executionParams);
+            console.log("New price:", finalSqrtPriceX96);
 
-            // Check if we need to handle tick crossing
             (bool crossingInitializedTick, int24 tick) =
                 _isCrossingInitializedTick(params.pool, poolKey, finalSqrtPriceX96);
-            unchecked {
-                if (crossingInitializedTick) {
-                    // Handle tick crossing and update state
-                    uint256 secondsUntilCrossingX96;
-                    (params.pool, secondsUntilCrossingX96) = _advanceTimeThroughTickCrossing(
-                        self, poolKey, TickCrossingParams(tick, params.nextTimestamp, secondsElapsedX96, params.pool)
-                    );
-                    secondsElapsedX96 = secondsElapsedX96 - secondsUntilCrossingX96;
-                } else {
-                    // Calculate earnings updates for both pools
-                    (uint256 earningsFactorPool0, uint256 earningsFactorPool1) =
-                        TwammMath.calculateEarningsUpdates(executionParams, finalSqrtPriceX96);
+            
+            if (crossingInitializedTick) {
+                console.log("Crossing tick:", tick);
+                (params.pool, secondsElapsedX96) = _advanceTimeThroughTickCrossing(
+                    self, poolKey, TickCrossingParams(tick, params.nextTimestamp, secondsElapsedX96, params.pool)
+                );
+            } else {
+                (uint256 earningsFactorPool0, uint256 earningsFactorPool1) =
+                    TwammMath.calculateEarningsUpdates(executionParams, finalSqrtPriceX96);
+                console.log("Earnings factors - Pool0:", earningsFactorPool0, "Pool1:", earningsFactorPool1);
 
-                    // Update pool states based on expiration interval
-                    if (params.nextTimestamp % params.expirationInterval == 0) {
-                        orderPool0For1.advanceToInterval(params.nextTimestamp, earningsFactorPool0);
-                        orderPool1For0.advanceToInterval(params.nextTimestamp, earningsFactorPool1);
-                    } else {
-                        orderPool0For1.advanceToCurrentTime(earningsFactorPool0);
-                        orderPool1For0.advanceToCurrentTime(earningsFactorPool1);
-                    }
-                    params.pool.sqrtPriceX96 = finalSqrtPriceX96;
-                    break;
+                if (params.nextTimestamp % params.expirationInterval == 0) {
+                    orderPool0For1.advanceToInterval(params.nextTimestamp, earningsFactorPool0);
+                    orderPool1For0.advanceToInterval(params.nextTimestamp, earningsFactorPool1);
+                } else {
+                    orderPool0For1.advanceToCurrentTime(earningsFactorPool0);
+                    orderPool1For0.advanceToCurrentTime(earningsFactorPool1);
                 }
+                params.pool.sqrtPriceX96 = finalSqrtPriceX96;
+                break;
             }
         }
 
@@ -1014,10 +1132,13 @@ contract NewEraHook is BaseHook, ITWAMM {
         PoolKey memory poolKey,
         TickCrossingParams memory params
     ) private returns (PoolParamsOnExecute memory, uint256) {
-        // Get the initialized price at the tick
+        console.log("=== _advanceTimeThroughTickCrossing ===");
+        console.log("Tick:", params.initializedTick);
+        console.log("Current price:", params.pool.sqrtPriceX96);
+        
         uint160 initializedSqrtPrice = TickMath.getSqrtPriceAtTick(params.initializedTick);
-
-        // Calculate time needed to reach the tick
+        console.log("Target price:", initializedSqrtPrice);
+        
         uint256 secondsUntilCrossingX96 = TwammMath.calculateTimeBetweenTicks(
             params.pool.liquidity,
             params.pool.sqrtPriceX96,
@@ -1025,8 +1146,8 @@ contract NewEraHook is BaseHook, ITWAMM {
             self.orderPool0For1.sellRateCurrent,
             self.orderPool1For0.sellRateCurrent
         );
+        console.log("Time until crossing:", secondsUntilCrossingX96);
 
-        // Calculate earnings updates for both pools
         (uint256 earningsFactorPool0, uint256 earningsFactorPool1) = TwammMath.calculateEarningsUpdates(
             TwammMath.ExecutionUpdateParams(
                 secondsUntilCrossingX96,
@@ -1037,23 +1158,27 @@ contract NewEraHook is BaseHook, ITWAMM {
             ),
             initializedSqrtPrice
         );
+        console.log("Earnings factors - Pool0:", earningsFactorPool0, "Pool1:", earningsFactorPool1);
 
-        // Update pool states
         self.orderPool0For1.advanceToCurrentTime(earningsFactorPool0);
         self.orderPool1For0.advanceToCurrentTime(earningsFactorPool1);
 
-        // Update liquidity and price
-        unchecked {
-            bytes32 tickSlot = keccak256(abi.encode(poolKey.toId(), params.initializedTick));
-            bytes32 tickData = poolManager.extsload(tickSlot);
-            int128 liquidityNet = int128(uint128(uint256(tickData)));
-            if (initializedSqrtPrice < params.pool.sqrtPriceX96) liquidityNet = -liquidityNet;
-            params.pool.liquidity = liquidityNet < 0
-                ? params.pool.liquidity - uint128(-liquidityNet)
-                : params.pool.liquidity + uint128(liquidityNet);
-
-            params.pool.sqrtPriceX96 = initializedSqrtPrice;
+        bytes32 tickSlot = keccak256(abi.encode(poolKey.toId(), params.initializedTick));
+        bytes32 tickData = poolManager.extsload(tickSlot);
+        int128 liquidityNet = int128(uint128(uint256(tickData)));
+        
+        if (initializedSqrtPrice < params.pool.sqrtPriceX96) {
+            liquidityNet = -liquidityNet;
         }
+        
+        params.pool.liquidity = liquidityNet < 0
+            ? params.pool.liquidity - uint128(-liquidityNet)
+            : params.pool.liquidity + uint128(liquidityNet);
+        params.pool.sqrtPriceX96 = initializedSqrtPrice;
+        
+        console.log("Final price:", params.pool.sqrtPriceX96);
+        console.log("Final liquidity:", params.pool.liquidity);
+        
         return (params.pool, secondsUntilCrossingX96);
     }
 
@@ -1094,9 +1219,16 @@ contract NewEraHook is BaseHook, ITWAMM {
      * @param amount The amount to settle
      */
     function _settle(Currency currency, uint128 amount) internal {
+        console.log("=== _settle ===");
+        console.log("Currency:", Currency.unwrap(currency));
+        console.log("Amount to settle:", amount);
+        console.log("Contract balance before settle:", currency.balanceOf(address(this)));
+        
         poolManager.sync(currency);
         currency.transfer(address(poolManager), amount);
         poolManager.settle();
+        
+        console.log("Contract balance after settle:", currency.balanceOf(address(this)));
     }
 
     /**
@@ -1105,7 +1237,14 @@ contract NewEraHook is BaseHook, ITWAMM {
      * @param amount The amount to take
      */
     function _take(Currency currency, uint128 amount) internal {
+        console.log("=== _take ===");
+        console.log("Currency:", Currency.unwrap(currency));
+        console.log("Amount to take:", amount);
+        console.log("Contract balance before take:", currency.balanceOf(address(this)));
+        
         poolManager.take(currency, address(this), amount);
+        
+        console.log("Contract balance after take:", currency.balanceOf(address(this)));
     }
 
     /**
