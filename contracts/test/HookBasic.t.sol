@@ -23,6 +23,7 @@ import {HookEnabledSwapRouter} from "../utils/HookEnabledSwapRouter.sol";
 import {PoolModifyLiquidityTest} from "v4-core/src/test/PoolModifyLiquidityTest.sol";
 import {LiquidityAmounts} from "@uniswap/v4-core/test/utils/LiquidityAmounts.sol";
 import {console} from "forge-std/console.sol";
+import {LimitHelper} from "../src/libraries/LimitHelper.sol";
 
 // Import events from NewEraHook for testing
 event LimitOrderPlaced(
@@ -550,7 +551,7 @@ contract NewEraHookBasicTest is Test, Deployers {
         );
 
         // Attempt to update with invalid tolerance
-        vm.expectRevert(NewEraHook.InvalidTolerance.selector);
+        vm.expectRevert(LimitHelper.InvalidTolerance.selector);
         hook.updateLimitOrder(key, user, 0, 200, 10001);
 
         vm.stopPrank();
@@ -582,7 +583,7 @@ contract NewEraHookBasicTest is Test, Deployers {
         );
 
         // Attempt to update with zero amount
-        vm.expectRevert(NewEraHook.InvalidAmount.selector);
+        vm.expectRevert(LimitHelper.InvalidAmount.selector);
         hook.updateLimitOrder(key, user, 0, 0, 200);
 
         vm.stopPrank();
@@ -1181,5 +1182,85 @@ contract NewEraHookBasicTest is Test, Deployers {
             }),
             ""
         );
+    }
+
+    /**
+     * @notice Test getting user limit orders
+     * @dev Verifies that getUserLimitOrders returns all orders (active and inactive) for the caller
+     */
+    function test_getUserLimitOrders_returnsAllOrders() public {
+        vm.startPrank(user);
+
+        // Set up order parameters for pool 1
+        uint256 tolerance1 = 100; // 1% tolerance in basis points
+        bool zeroForOne1 = true; // Sell order (token0 for token1)
+        uint256 amount1 = 100; // Base amount in wei
+
+        // Prepare tokens for the order
+        token0.mint(user, amount1 * 2);
+        token1.mint(user, amount1 * 2);
+        token0.approve(address(hook), type(uint256).max);
+        token1.approve(address(hook), type(uint256).max);
+        token0.approve(address(manager), type(uint256).max);
+        token1.approve(address(manager), type(uint256).max);
+
+        // Calculate order amounts including fees
+        (uint256 baseAmount1, uint256 totalAmount1) = hook.calculateOrderAmounts(
+            amount1,
+            key
+        );
+
+        // Place the limit order in pool 1
+        hook.placeLimitOrder(
+            key,
+            baseAmount1,
+            totalAmount1,
+            tolerance1,
+            zeroForOne1
+        );
+
+        // Set up a second pool (different fee)
+        PoolKey memory key2 = key;
+        key2.fee = key.fee + 1;
+        // Place a limit order in pool 2
+        uint256 tolerance2 = 200;
+        bool zeroForOne2 = false;
+        uint256 amount2 = 200;
+        (uint256 baseAmount2, uint256 totalAmount2) = hook.calculateOrderAmounts(
+            amount2,
+            key2
+        );
+        token1.mint(user, amount2 * 2);
+        token1.approve(address(hook), type(uint256).max);
+        token1.approve(address(manager), type(uint256).max);
+        hook.placeLimitOrder(
+            key2,
+            baseAmount2,
+            totalAmount2,
+            tolerance2,
+            zeroForOne2
+        );
+
+        // Call the new getUserLimitOrders (no argument)
+        NewEraHook.LimitOrder[] memory orders = hook.getUserLimitOrders();
+        assertEq(orders.length, 2, "Should return all orders across all pools");
+
+        // Check first order (pool 1)
+        assertEq(orders[0].user, user, "Incorrect order user (1)");
+        assertEq(orders[0].amount, amount1, "Incorrect order amount (1)");
+        assertEq(orders[0].tolerance, tolerance1, "Incorrect tolerance (1)");
+        assertEq(orders[0].zeroForOne, zeroForOne1, "Incorrect zeroForOne (1)");
+        assertTrue(orders[0].isActive, "Order should be active (1)");
+        assertTrue(orders[0].tokensTransferred, "Tokens should be transferred (1)");
+
+        // Check second order (pool 2)
+        assertEq(orders[1].user, user, "Incorrect order user (2)");
+        assertEq(orders[1].amount, amount2, "Incorrect order amount (2)");
+        assertEq(orders[1].tolerance, tolerance2, "Incorrect tolerance (2)");
+        assertEq(orders[1].zeroForOne, zeroForOne2, "Incorrect zeroForOne (2)");
+        assertTrue(orders[1].isActive, "Order should be active (2)");
+        assertTrue(orders[1].tokensTransferred, "Tokens should be transferred (2)");
+
+        vm.stopPrank();
     }
 }

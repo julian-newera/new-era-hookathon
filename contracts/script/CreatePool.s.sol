@@ -6,6 +6,8 @@ import {IPoolManager} from "v4-core/src/interfaces/IPoolManager.sol";
 import {PoolKey} from "v4-core/src/types/PoolKey.sol";
 import {Currency} from "v4-core/src/types/Currency.sol";
 import {IHooks} from "v4-core/src/interfaces/IHooks.sol";
+import {IERC20Minimal} from "v4-core/src/interfaces/external/IERC20Minimal.sol";
+import {PoolModifyLiquidityTest} from "v4-core/src/test/PoolModifyLiquidityTest.sol";
 
 contract CreatePoolScript is Script {
     function run() external {
@@ -13,8 +15,8 @@ contract CreatePoolScript is Script {
         uint256 deployerPrivateKey = 0x151ee9c063332f97069f4f2833c32878a3e35a77070869fae3c0c6050c055528;
         address poolManagerAddress = 0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408;   // Uniswap v4 Pool Manager on Base Sepolia
         address usdc = 0x60D7A23033f0e2Ebd4A509FF7a50d19AE3096007;                       // USDC token address on Base Sepolia
-        address usdy = 0xdd47689da802262Eaf822a94982d929c4afA16ce;                       // USDY token address on Base Sepolia
-        address hookContractAddress = 0x39d84A04893dC1E73cc75696E0016BB46186b8C0; // Your already deployed hook contract
+        address usdy = 0x020dD0882F9132824bc3e5d539136D9BaacdFEd3;                       // USDY token address on Base Sepolia
+        address hookContractAddress = 0x29CaFadB8A449775b1f0257707CbDf847D2d68c0; // Your already deployed hook contract
 
         // Set fee tier and tick spacing.
         // For example: fee = 3000 (0.3%) and tickSpacing = 60.
@@ -31,8 +33,8 @@ contract CreatePoolScript is Script {
 
         // Construct the PoolKey.
         PoolKey memory key = PoolKey({
-            currency0: Currency.wrap(usdc),
-            currency1: Currency.wrap(usdy),
+            currency0: Currency.wrap(usdy),
+            currency1: Currency.wrap(usdc),
             fee: fee,
             tickSpacing: tickSpacing,
             hooks: IHooks(hookContractAddress)
@@ -44,6 +46,31 @@ contract CreatePoolScript is Script {
         // Broadcast the transaction using your hardcoded private key.
         vm.startBroadcast(deployerPrivateKey);
         poolManager.initialize(key, initialSqrtPriceX96);
+
+        // Instantiate the liquidity router
+        PoolModifyLiquidityTest modifyLiquidityRouter = new PoolModifyLiquidityTest(poolManager);
+
+        // Approve tokens for the router
+        IERC20Minimal(usdc).approve(address(modifyLiquidityRouter), type(uint256).max);
+        IERC20Minimal(usdy).approve(address(modifyLiquidityRouter), type(uint256).max);
+
+        // Set your desired liquidity parameters
+        int24 tickLower = -60; // Example: full range for tickSpacing=60
+        int24 tickUpper = 60;
+        int256 liquidityDelta = 1e18; // Amount of liquidity to add
+        bytes32 salt = 0;
+
+        // Prepare the params struct
+        IPoolManager.ModifyLiquidityParams memory params = IPoolManager.ModifyLiquidityParams({
+            tickLower: tickLower,
+            tickUpper: tickUpper,
+            liquidityDelta: liquidityDelta,
+            salt: salt
+        });
+
+        // Add liquidity
+        modifyLiquidityRouter.modifyLiquidity(key, params, "");
+
         vm.stopBroadcast();
     }
 }
