@@ -120,16 +120,16 @@ async function main() {
 
 if (require.main === module) {
     // Schedule to run every 20 minutes
-    cron.schedule('*/20 * * * *', async () => {
-        console.log('Running scheduled price update...');
-        try {
-            await main();
-        } catch (error) {
-            console.error('Scheduled update failed:', error);
-        }
-    });
+    // cron.schedule('*/20 * * * *', async () => {
+        // console.log('Running scheduled price update...');
+        // try {
+            main();
+        // } catch (error) {
+            // console.error('Scheduled update failed:', error);
+        // }
+    // });
 
-    // console.log('Price update service started. Will run every 20 minutes.');
+    console.log('Price update service started. Will run every 20 minutes.');
 }
 
 export {
