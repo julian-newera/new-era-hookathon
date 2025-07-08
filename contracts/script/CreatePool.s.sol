@@ -16,17 +16,18 @@ contract CreatePoolScript is Script {
         address poolManagerAddress = 0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408;   // Uniswap v4 Pool Manager on Base Sepolia
         address usdc = 0x60D7A23033f0e2Ebd4A509FF7a50d19AE3096007;                       // USDC token address on Base Sepolia
         address usdy = 0x020dD0882F9132824bc3e5d539136D9BaacdFEd3;                       // USDY token address on Base Sepolia
-        address hookContractAddress = 0x29CaFadB8A449775b1f0257707CbDf847D2d68c0; // Your already deployed hook contract
+        address hookContractAddress = 0xef3847D57458131Ca0f3CFC6017296cFff28e8C0; // Your already deployed hook contract
 
         // Set fee tier and tick spacing.
         // For example: fee = 3000 (0.3%) and tickSpacing = 60.
-        uint24 fee = 500;
+        uint24 fee = 200;
         int24 tickSpacing = 60;
 
         // For a USDC/USDY price of 1.0827, we calculate:
         // sqrt(1.0827) ≈ 1.040558, so:
         // initialSqrtPriceX96 = 1.040558 * 2^96 ≈ 82515065374000000000000000000.
-        uint160 initialSqrtPriceX96 = 79228162514264337593543950336;
+        // uint160 initialSqrtPriceX96 = 79228162514264337593543950336;
+        uint160 SQRT_PRICE_1 = 79228162514264337593543950336; 
 
         // Instantiate the pool manager contract.
         IPoolManager poolManager = IPoolManager(poolManagerAddress);
@@ -37,7 +38,7 @@ contract CreatePoolScript is Script {
             currency1: Currency.wrap(usdc),
             fee: fee,
             tickSpacing: tickSpacing,
-            hooks: IHooks(hookContractAddress)
+            hooks: IHooks(address(0))
         });
 
         // If your hook requires additional data, encode it here; otherwise use an empty bytes string.
@@ -45,11 +46,35 @@ contract CreatePoolScript is Script {
 
         // Broadcast the transaction using your hardcoded private key.
         vm.startBroadcast(deployerPrivateKey);
-        poolManager.initialize(key, initialSqrtPriceX96);
+        poolManager.initialize(key, SQRT_PRICE_1);
 
         // Instantiate the liquidity router
         PoolModifyLiquidityTest modifyLiquidityRouter = new PoolModifyLiquidityTest(poolManager);
 
+        // IERC20Minimal(usdy).transferFrom(msg.sender, address(this), type(uint128).max);
+        // IERC20Minimal(usdc).transferFrom(msg.sender, address(this), type(uint128).max);
+        // IERC20Minimal(usdy).approve(address(poolManager), type(uint128).max);
+        // IERC20Minimal(usdc).approve(address(poolManager), type(uint128).max);
+
+        // Initialize the pool with sqrtPriceX96 if not already initialized
+        // try poolManager.initialize(key, SQRT_PRICE_1) {
+        //     // Pool initialized
+        // } catch {
+        //     // Assume pool is already initialized
+        // }
+        // int24 tickLower = -60; // Example: full range for tickSpacing=60
+        // int24 tickUpper = 60;
+        // int256 liquidityDelta = 1e18; // Amount of liquidity to add
+        // bytes32 salt = 0;
+
+
+        // IPoolManager.ModifyPositionParams memory params = IPoolManager.ModifyPositionParams({
+        //     tickLower: tickLower,
+        //     tickUpper: tickUpper,
+        //     liquidityDelta: int256(amount0 + amount1) // Simplified liquidity calc
+        // });
+
+        // poolManager.modifyPosition(key, params, hex"");
         // Approve tokens for the router
         IERC20Minimal(usdc).approve(address(modifyLiquidityRouter), type(uint256).max);
         IERC20Minimal(usdy).approve(address(modifyLiquidityRouter), type(uint256).max);

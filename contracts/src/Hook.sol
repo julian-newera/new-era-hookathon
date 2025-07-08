@@ -149,7 +149,7 @@ contract NewEraHook is BaseHook, ITWAMM {
         // Add to allPoolIds if not already present
         bool exists = false;
         for (uint256 i = 0; i < allPoolIds.length; i++) {
-            if (allPoolIds[i] == poolId) {
+            if (PoolId.unwrap(allPoolIds[i]) == PoolId.unwrap(poolId)) {
                 exists = true;
                 break;
             }
@@ -166,50 +166,50 @@ contract NewEraHook is BaseHook, ITWAMM {
         IPoolManager.SwapParams calldata params,
         bytes calldata hookData
     ) internal override returns (bytes4, BeforeSwapDelta, uint24) {
-        executeTWAMMOrders(key);
-        if (sender == address(this)) {
-            return (
-                this.beforeSwap.selector,
-                BeforeSwapDeltaLibrary.ZERO_DELTA,
-                0
-            );
-        }
-        address orderOwner = abi.decode(hookData, (address));
-        PoolId poolId = key.toId();
-        uint256 orderCount = userOrderCount[poolId][orderOwner];
-        uint256 i = 0;
-        while (i < orderCount) {
-            LimitOrder storage order = limitOrders[poolId][orderOwner][i];
-            if (!order.isActive) {
-                i++;
-                continue;
-            }
-            uint160 sqrtPriceX96 = params.sqrtPriceLimitX96;
-            uint256 currentPrice = (uint256(sqrtPriceX96) *
-                uint256(sqrtPriceX96) *
-                1e18) >> 192;
-            uint256 latestOraclePrice = priceOracle.getLatestPrice(
-                ERC20(Currency.unwrap(key.currency1)).name()
-            );
-            order.oraclePrice = latestOraclePrice;
-            uint256 scaledOraclePrice = (latestOraclePrice * 1e18) / 100;
+        // executeTWAMMOrders(key);
+        // if (sender == address(this)) {
+        //     return (
+        //         this.beforeSwap.selector,
+        //         BeforeSwapDeltaLibrary.ZERO_DELTA,
+        //         0
+        //     );
+        // }
+        // address orderOwner = abi.decode(hookData, (address));
+        // PoolId poolId = key.toId();
+        // uint256 orderCount = userOrderCount[poolId][orderOwner];
+        // uint256 i = 0;
+        // while (i < orderCount) {
+        //     LimitOrder storage order = limitOrders[poolId][orderOwner][i];
+        //     if (!order.isActive) {
+        //         i++;
+        //         continue;
+        //     }
+        //     uint160 sqrtPriceX96 = params.sqrtPriceLimitX96;
+        //     uint256 currentPrice = (uint256(sqrtPriceX96) *
+        //         uint256(sqrtPriceX96) *
+        //         1e18) >> 192;
+        //     uint256 latestOraclePrice = priceOracle.getLatestPrice(
+        //         ERC20(Currency.unwrap(key.currency1)).name()
+        //     );
+        //     order.oraclePrice = latestOraclePrice;
+        //     uint256 scaledOraclePrice = (latestOraclePrice * 1e18) / 100;
             
-            bool shouldExecute = true;
-            if (order.tolerance > 0) {
-                uint256 scaledTolerance = (order.tolerance * 1e18) / 10000;
-                uint256 priceLimit = order.zeroForOne
-                    ? scaledOraclePrice - scaledTolerance 
-                    : scaledOraclePrice + scaledTolerance; 
-                shouldExecute = (order.zeroForOne && currentPrice <= priceLimit) ||
-                    (!order.zeroForOne && currentPrice >= priceLimit);
-            }
-            if (shouldExecute) {
-                _executeLimitOrder(key, order);
-                order.isActive = false;
-                emit LimitOrderExecuted(poolId, orderOwner, i, order.amount, currentPrice);
-            }
-            i++;
-        }
+        //     bool shouldExecute = true;
+        //     if (order.tolerance > 0) {
+        //         uint256 scaledTolerance = (order.tolerance * 1e18) / 10000;
+        //         uint256 priceLimit = order.zeroForOne
+        //             ? scaledOraclePrice - scaledTolerance 
+        //             : scaledOraclePrice + scaledTolerance; 
+        //         shouldExecute = (order.zeroForOne && currentPrice <= priceLimit) ||
+        //             (!order.zeroForOne && currentPrice >= priceLimit);
+        //     }
+        //     if (shouldExecute) {
+        //         _executeLimitOrder(key, order);
+        //         order.isActive = false;
+        //         emit LimitOrderExecuted(poolId, orderOwner, i, order.amount, currentPrice);
+        //     }
+        //     i++;
+        // }
 
         return (this.beforeSwap.selector, BeforeSwapDeltaLibrary.ZERO_DELTA, 0);
     }
@@ -221,43 +221,43 @@ contract NewEraHook is BaseHook, ITWAMM {
         BalanceDelta,
         bytes calldata hookData
     ) internal override returns (bytes4, int128) {
-        address orderOwner = abi.decode(hookData, (address));
-        PoolId poolId = key.toId();
-        uint256 orderCount = userOrderCount[poolId][orderOwner];
+        // address orderOwner = abi.decode(hookData, (address));
+        // PoolId poolId = key.toId();
+        // uint256 orderCount = userOrderCount[poolId][orderOwner];
 
-        uint160 sqrtPriceX96 = params.sqrtPriceLimitX96;
-        uint256 currentPrice = (uint256(sqrtPriceX96) *
-            uint256(sqrtPriceX96) *
-            1e18) >> 192;
+        // uint160 sqrtPriceX96 = params.sqrtPriceLimitX96;
+        // uint256 currentPrice = (uint256(sqrtPriceX96) *
+        //     uint256(sqrtPriceX96) *
+        //     1e18) >> 192;
 
-        uint256 latestOraclePrice = priceOracle.getLatestPrice(
-            ERC20(Currency.unwrap(key.currency1)).name()
-        );
-        uint256 scaledOraclePrice = (latestOraclePrice * 1e18) / 100;
-        uint256 i = 0;
-        while (i < orderCount) {
-            LimitOrder storage order = limitOrders[poolId][orderOwner][i];
-            if (!order.isActive) {
-                i++;
-                continue;
-            }
-            bool shouldExecute = true;
-            if (order.tolerance > 0) {
-                uint256 scaledTolerance = (order.tolerance * 1e18) / 10000;
-                uint256 priceLimit = order.zeroForOne
-                    ? scaledOraclePrice - scaledTolerance
-                    : scaledOraclePrice + scaledTolerance;
+        // uint256 latestOraclePrice = priceOracle.getLatestPrice(
+        //     ERC20(Currency.unwrap(key.currency1)).name()
+        // );
+        // uint256 scaledOraclePrice = (latestOraclePrice * 1e18) / 100;
+        // uint256 i = 0;
+        // while (i < orderCount) {
+        //     LimitOrder storage order = limitOrders[poolId][orderOwner][i];
+        //     if (!order.isActive) {
+        //         i++;
+        //         continue;
+        //     }
+        //     bool shouldExecute = true;
+        //     if (order.tolerance > 0) {
+        //         uint256 scaledTolerance = (order.tolerance * 1e18) / 10000;
+        //         uint256 priceLimit = order.zeroForOne
+        //             ? scaledOraclePrice - scaledTolerance
+        //             : scaledOraclePrice + scaledTolerance;
 
-                shouldExecute = (order.zeroForOne && currentPrice <= priceLimit) ||
-                    (!order.zeroForOne && currentPrice >= priceLimit);
-            }
-            if (shouldExecute) {
-                _executeLimitOrder(key, order);
-                order.isActive = false;
-                emit LimitOrderExecuted(poolId, orderOwner, i, order.amount, currentPrice);
-            }
-            i++;
-        }
+        //         shouldExecute = (order.zeroForOne && currentPrice <= priceLimit) ||
+        //             (!order.zeroForOne && currentPrice >= priceLimit);
+        //     }
+        //     if (shouldExecute) {
+        //         _executeLimitOrder(key, order);
+        //         order.isActive = false;
+        //         emit LimitOrderExecuted(poolId, orderOwner, i, order.amount, currentPrice);
+        //     }
+        //     i++;
+        // }
         return (this.afterSwap.selector, 0);
     }
     function _beforeAddLiquidity(

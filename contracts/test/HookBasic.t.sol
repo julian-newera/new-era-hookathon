@@ -146,9 +146,9 @@ contract NewEraHookBasicTest is Test, Deployers {
         token0.mint(user, amount * 2);
         token1.mint(user, amount * 2);
         token0.approve(address(hook), type(uint256).max);
-        token1.approve(address(hook), type(uint256).max);
-        token0.approve(address(manager), type(uint256).max);
-        token1.approve(address(manager), type(uint256).max);
+        // token1.approve(address(hook), type(uint256).max);
+        // token0.approve(address(manager), type(uint256).max);
+        // token1.approve(address(manager), type(uint256).max);
 
         // Calculate order amounts including fees
         (uint256 baseAmount, uint256 totalAmount) = hook.calculateOrderAmounts(
@@ -1219,9 +1219,8 @@ contract NewEraHookBasicTest is Test, Deployers {
             zeroForOne1
         );
 
-        // Set up a second pool (different fee)
-        PoolKey memory key2 = key;
-        key2.fee = key.fee + 1;
+        (uint24 newFee, uint160 newSqrtPrice) = (key.fee + 1, SQRT_PRICE_1); // or any valid sqrt price
+        (PoolKey memory key2, ) = initPool(currency0, currency1, IHooks(address(hook)), newFee, newSqrtPrice);
         // Place a limit order in pool 2
         uint256 tolerance2 = 200;
         bool zeroForOne2 = false;
