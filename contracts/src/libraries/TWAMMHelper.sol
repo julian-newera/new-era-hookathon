@@ -11,6 +11,7 @@ import {TickMath} from "v4-core/src/libraries/TickMath.sol";
 import {SqrtPriceMath} from "v4-core/src/libraries/SqrtPriceMath.sol";
 import {LiquidityMath} from "v4-core/src/libraries/LiquidityMath.sol";
 import {FixedPoint96} from "v4-core/src/libraries/FixedPoint96.sol";
+import {console} from "forge-std/console.sol";
 
 library TWAMMHelper {
     using PoolIdLibrary for PoolKey;
@@ -102,6 +103,7 @@ library TWAMMHelper {
             
             int16 wordPos = int16(nextTickInit >> 8);
             bytes32 wordSlot = keccak256(abi.encode(poolKey.toId(), wordPos));
+            console.log("step 2", nextTickInit);
             bytes32 wordData = poolManager.extsload(wordSlot);
             
             uint256 bitPos = uint256(uint24(nextTickInit % 256));
@@ -195,6 +197,7 @@ library TWAMMHelper {
             );
             (bool crossingInitializedTick, int24 tick) =
                 _isCrossingInitializedTick(params.pool, poolKey, finalSqrtPriceX96, poolManager);
+            console.log("step", crossingInitializedTick);
             if (crossingInitializedTick) {
                 bytes32 tickSlot = keccak256(abi.encode(poolKey.toId(), tick));
                 bytes32 tickData = poolManager.extsload(tickSlot);

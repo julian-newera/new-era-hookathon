@@ -9,6 +9,8 @@ import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
 import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {IPositionManager} from "@uniswap/v4-periphery/src/interfaces/IPositionManager.sol";
 import {IPermit2} from "permit2/src/interfaces/IPermit2.sol";
+import {console2} from "forge-std/console2.sol";
+import {console} from "forge-std/console.sol";
 
 import {IUniswapV4Router04} from "hookmate/interfaces/router/IUniswapV4Router04.sol";
 import {AddressConstants} from "hookmate/constants/AddressConstants.sol";
@@ -24,18 +26,18 @@ contract BaseScript is Script {
     /////////////////////////////////////
     // --- Configure These ---
     /////////////////////////////////////
-    IERC20 internal constant token0 = IERC20(0x0165878A594ca255338adfa4d48449f69242Eb8F);
-    IERC20 internal constant token1 = IERC20(0xa513E6E4b8f2a923D98304ec87F64353C4D5C853);
-    IHooks constant hookContract = IHooks(address(0));
+    IERC20 internal constant token0 = IERC20(0x020dD0882F9132824bc3e5d539136D9BaacdFEd3);
+    IERC20 internal constant token1 = IERC20(0x60D7A23033f0e2Ebd4A509FF7a50d19AE3096007);
+    IHooks constant hookContract = IHooks(0x04316A4c23A4975d41BdA733311a4814115CE8C0);
     /////////////////////////////////////
 
     Currency immutable currency0;
     Currency immutable currency1;
 
     constructor() {
-        poolManager = IPoolManager(AddressConstants.getPoolManagerAddress(block.chainid));
-        positionManager = IPositionManager(payable(AddressConstants.getPositionManagerAddress(block.chainid)));
-        swapRouter = IUniswapV4Router04(payable(AddressConstants.getV4SwapRouterAddress(block.chainid)));
+        poolManager = IPoolManager(AddressConstants.getPoolManagerAddress(84532));
+        positionManager = IPositionManager(payable(AddressConstants.getPositionManagerAddress(84532)));
+        // swapRouter = IUniswapV4Router04(payable(AddressConstants.getV4SwapRouterAddress(84532)));
 
         deployerAddress = getDeployer();
 
@@ -47,7 +49,7 @@ contract BaseScript is Script {
         vm.label(address(deployerAddress), "Deployer");
         vm.label(address(poolManager), "PoolManager");
         vm.label(address(positionManager), "PositionManager");
-        vm.label(address(swapRouter), "SwapRouter");
+        // vm.label(address(swapRouter), "SwapRouter");
         vm.label(address(hookContract), "HookContract");
     }
 

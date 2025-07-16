@@ -10,31 +10,33 @@ import {Actions} from "@uniswap/v4-periphery/src/libraries/Actions.sol";
 import {LiquidityAmounts} from "@uniswap/v4-core/test/utils/LiquidityAmounts.sol";
 import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 import {IHooks} from "v4-core/src/interfaces/IHooks.sol";
+import {console2} from "forge-std/console2.sol";
 
 import {BaseScript} from "./BaseScript.sol";
 import {LiquidityHelpers} from "./LiquidityHelpers.sol";
+import {console2} from "forge-std/console2.sol";
+import {console} from "forge-std/console.sol";
 
 contract CreatePoolAndAddLiquidityScript is BaseScript, LiquidityHelpers {
     using CurrencyLibrary for Currency;
 
-    uint256 deployerPrivateKey = 0x151ee9c063332f97069f4f2833c32878a3e35a77070869fae3c0c6050c055528;
     // address poolManagerAddress = 0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408;   // Uniswap v4 Pool Manager on Base Sepolia
-    address usdc = 0x60D7A23033f0e2Ebd4A509FF7a50d19AE3096007;                       // USDC token address on Base Sepolia
-    address usdy = 0x020dD0882F9132824bc3e5d539136D9BaacdFEd3;                       // USDY token address on Base Sepolia
-    address hookContractAddress = 0xef3847D57458131Ca0f3CFC6017296cFff28e8C0; 
-    address deployerAddress = 0x2F09Dd93f736eAc37147E339DA9c2b56bc66AD26;
+    // address usdc = 0x60D7A23033f0e2Ebd4A509FF7a50d19AE3096007;                       // USDC token address on Base Sepolia
+    // address usdy = 0x020dD0882F9132824bc3e5d539136D9BaacdFEd3;                       // USDY token address on Base Sepolia
+    // address hookContractAddress = 0xef3847D57458131Ca0f3CFC6017296cFff28e8C0; 
+    uint256 deployerPrivateKey = 0x151ee9c063332f97069f4f2833c32878a3e35a77070869fae3c0c6050c055528;
 
     /////////////////////////////////////
     // --- Configure These ---
     /////////////////////////////////////
 
-    uint24 lpFee = 5000; // 0.50%
+    uint24 lpFee = 0; // 0.50%
     int24 tickSpacing = 100;
     uint160 startingPrice = 2 ** 96; // Starting price, sqrtPriceX96; floor(sqrt(1) * 2^96)
 
     // --- liquidity position configuration --- //
-    uint256 public token0Amount = 1e18;
-    uint256 public token1Amount = 1e18;
+    uint256 public token0Amount = 1000e18;
+    uint256 public token1Amount = 1000e18;
 
     // range of the position, must be a multiple of tickSpacing
     int24 tickLower;
@@ -43,11 +45,11 @@ contract CreatePoolAndAddLiquidityScript is BaseScript, LiquidityHelpers {
 
     function run() external {
         PoolKey memory poolKey = PoolKey({
-            currency0: Currency.wrap(usdy),
-            currency1: Currency.wrap(usdc),
+            currency0: currency0,
+            currency1: currency1,
             fee: lpFee,
             tickSpacing: tickSpacing,
-            hooks: IHooks(address(0))
+            hooks: hookContract
         });
 
         bytes memory hookData = new bytes(0);

@@ -1312,6 +1312,11 @@
             "internalType": "uint256"
           },
           {
+            "name": "oraclePrice2",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
             "name": "tolerance",
             "type": "uint256",
             "internalType": "uint256"
@@ -1328,6 +1333,63 @@
           },
           {
             "name": "tokensTransferred",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "creationTimestamp",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getUserTWAMMOrders",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "orders",
+        "type": "tuple[]",
+        "internalType": "struct ITWAMM.Order[]",
+        "components": [
+          {
+            "name": "sellRate",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "earningsFactorLast",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "tolerance",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
+      },
+      {
+        "name": "orderKeys",
+        "type": "tuple[]",
+        "internalType": "struct ITWAMM.OrderKey[]",
+        "components": [
+          {
+            "name": "owner",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "expiration",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "zeroForOne",
             "type": "bool",
             "internalType": "bool"
           }
@@ -1378,6 +1440,11 @@
         "internalType": "uint256"
       },
       {
+        "name": "oraclePrice2",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
         "name": "tolerance",
         "type": "uint256",
         "internalType": "uint256"
@@ -1396,6 +1463,11 @@
         "name": "tokensTransferred",
         "type": "bool",
         "internalType": "bool"
+      },
+      {
+        "name": "creationTimestamp",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"

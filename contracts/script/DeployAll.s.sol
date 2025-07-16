@@ -14,8 +14,8 @@ contract DeployAll is Script {
         vm.startBroadcast();
 
         // 1. Deploy PriceOracle
-        PriceOracle priceOracle = new PriceOracle();
-        priceOracleAddr = address(priceOracle);
+        // PriceOracle priceOracle = new PriceOracle();
+        priceOracleAddr = address(0x6f52dFd822A5Fab638e8fF7e9e7B37f030193aC6);
         console2.log("PriceOracle deployed at:", priceOracleAddr);
 
         // 2. Deterministically deploy NewEraHook using HookMiner
