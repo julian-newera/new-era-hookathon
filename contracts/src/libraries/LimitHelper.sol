@@ -41,6 +41,14 @@ library LimitHelper {
         IPriceOracle priceOracle
     ) external view returns (uint256 oraclePrice) {
         oraclePrice = priceOracle.getLatestPrice(
+            ERC20(Currency.unwrap(key.currency0)).name()
+        );
+    }
+    function getOraclePrice2(
+        PoolKey calldata key,
+        IPriceOracle priceOracle
+    ) external view returns (uint256 oraclePrice) {
+        oraclePrice = priceOracle.getLatestPrice(
             ERC20(Currency.unwrap(key.currency1)).name()
         );
     }

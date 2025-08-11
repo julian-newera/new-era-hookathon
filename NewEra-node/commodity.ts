@@ -35,7 +35,7 @@ async function getCommodityInfo(): Promise<CommodityData> {
             throw new Error('Invalid asset classes response');
         }
 
-        const commodityClass = response.assetClasses.find((ac: AssetClass) => ac.name === 'stablecoins');
+        const commodityClass = response.assetClasses.find((ac: AssetClass) => ac.name === 'commodities');
         if (!commodityClass) {
             throw new Error('Commodity class not found');
         }
@@ -46,8 +46,8 @@ async function getCommodityInfo(): Promise<CommodityData> {
             throw new Error('No data received for the specified commodity');
         }
 
-        const price = 1;
-        const name = 'Circle USD';
+        const price = assetsResponse[0].price_dollar.val;
+        const name = assetsResponse[0].name;
 
         // Validate price is a positive number
         if (typeof price !== 'number' || price <= 0) {
@@ -138,7 +138,7 @@ if (require.main === module) {
     //     }
     // });
 
-    console.log('Price update service started. Will run every 20 minutes.');
+    // console.log('Price update service started. Will run every 20 minutes.');
 }
 
 export {

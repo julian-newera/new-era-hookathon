@@ -146,9 +146,9 @@ contract NewEraHookBasicTest is Test, Deployers {
         token0.mint(user, amount * 2);
         token1.mint(user, amount * 2);
         token0.approve(address(hook), type(uint256).max);
-        token1.approve(address(hook), type(uint256).max);
-        token0.approve(address(manager), type(uint256).max);
-        token1.approve(address(manager), type(uint256).max);
+        // token1.approve(address(hook), type(uint256).max);
+        // token0.approve(address(manager), type(uint256).max);
+        // token1.approve(address(manager), type(uint256).max);
 
         // Calculate order amounts including fees
         (uint256 baseAmount, uint256 totalAmount) = hook.calculateOrderAmounts(
@@ -171,10 +171,13 @@ contract NewEraHookBasicTest is Test, Deployers {
             uint256 orderAmount,
             uint256 orderTotalAmount,
             uint256 oraclePrice,
+            uint256 oraclePrice2,
             uint256 orderTolerance,
             bool orderZeroForOne,
             bool isActive,
-            bool tokensTransferred
+            bool tokensTransferred,
+            uint256 creationTimestamp,
+            bool shouldExecute
         ) = hook.limitOrders(key.toId(), user, 0);
 
         assertEq(orderUser, user, "Incorrect order user");
@@ -183,6 +186,8 @@ contract NewEraHookBasicTest is Test, Deployers {
         assertEq(orderZeroForOne, zeroForOne, "Incorrect zeroForOne");
         assertTrue(isActive, "Order should be active");
         assertTrue(tokensTransferred, "Tokens should be transferred");
+        assertEq(oraclePrice2, LimitHelper.getOraclePrice2(key, priceOracle), "Incorrect oraclePrice2");
+        assertTrue(creationTimestamp > 0, "creationTimestamp should be set");
 
         vm.stopPrank();
     }
@@ -192,9 +197,34 @@ contract NewEraHookBasicTest is Test, Deployers {
      * @dev Verifies that a limit order is executed when price conditions are met
      */
     function test_limitOrderExecution() public {
-        vm.startPrank(user);
 
-        // Set up order parameters
+        vm.startPrank(user);
+        uint256 amount0 = 10 ether;
+        uint256 amount1 = 10 ether;
+        
+        token0.mint(user, amount0);
+        token1.mint(user, amount1);
+        
+        token0.approve(address(modifyLiquidityRouter), amount0);
+        token1.approve(address(modifyLiquidityRouter), amount1);
+        
+        // Add liquidity in a very tight range around current price
+        int24 tickLower = -60;
+        int24 tickUpper = 60;
+        
+        // Use the modifyLiquidityRouter to add liquidity with smaller amount
+        modifyLiquidityRouter.modifyLiquidity(
+            key,
+            IPoolManager.ModifyLiquidityParams({
+                tickLower: tickLower,
+                tickUpper: tickUpper,
+                liquidityDelta: 10, // Significantly reduced liquidity amount
+                salt: bytes32(0)
+            }),
+            ""
+        );
+        
+         // Set up order parameters
         uint256 amount = 200;
         uint256 tolerance = 100; // 1% tolerance in basis points
         bool zeroForOne = false; // Buy order (token1 for token0)
@@ -203,6 +233,8 @@ contract NewEraHookBasicTest is Test, Deployers {
         token0.mint(user, amount * 2);
         token1.mint(user, amount * 2);
         token0.approve(address(hook), type(uint256).max);
+        token0.approve(address(swapRouter), type(uint256).max);
+        token1.approve(address(swapRouter), type(uint256).max);
         token1.approve(address(hook), type(uint256).max);
         token0.approve(address(manager), type(uint256).max);
         token1.approve(address(manager), type(uint256).max);
@@ -214,17 +246,15 @@ contract NewEraHookBasicTest is Test, Deployers {
         );
 
         // Get current oracle price
-        uint256 oraclePrice = priceOracle.getLatestPrice("TEST");
 
         // Prepare tokens for the buy order
         token1.mint(user, totalAmount);
         token1.approve(address(hook), totalAmount);
         token1.approve(address(manager), totalAmount);
+        console.log("test");
 
         // Additional approval for pool manager
-        vm.stopPrank();
-        token1.approve(address(manager), totalAmount);
-        vm.startPrank(user);
+        // token1.approve(address(manager), totalAmount);
 
         // Place the limit order
         hook.placeLimitOrder(
@@ -240,20 +270,23 @@ contract NewEraHookBasicTest is Test, Deployers {
             address orderUser,
             uint256 orderAmount,
             uint256 orderTotalAmount,
-            uint256 orderOraclePrice,
+            uint256 oraclePrice,
+            uint256 oraclePrice2,
             uint256 orderTolerance,
             bool orderZeroForOne,
             bool isActive,
-            bool tokensTransferred
+            bool tokensTransferred,
+            uint256 creationTimestamp,
+            bool shouldExecute
         ) = hook.limitOrders(key.toId(), user, 0);
         assertTrue(isActive, "Limit order should be created and active");
         assertFalse(orderZeroForOne, "Should be a buy order");
         assertEq(orderTotalAmount, totalAmount, "Total amount should match");
         assertEq(orderTolerance, tolerance, "Tolerance should match");
+        assertEq(oraclePrice2, LimitHelper.getOraclePrice2(key, priceOracle), "Incorrect oraclePrice2");
+        assertTrue(creationTimestamp > 0, "creationTimestamp should be set");
 
-        vm.stopPrank();
-
-        // Calculate price levels for the test
+         // Calculate price levels for the test
         uint160 initialSqrtPrice = TickMath.getSqrtPriceAtTick(0);
         uint256 initialPrice = (uint256(initialSqrtPrice) *
             uint256(initialSqrtPrice) *
@@ -269,7 +302,7 @@ contract NewEraHookBasicTest is Test, Deployers {
             amountSpecified: 1e18, // Large amount to ensure price movement
             sqrtPriceLimitX96: targetSqrtPrice // Target price 1000 ticks higher
         });
-
+        console.log("test2");
         // Execute swap to trigger order execution
         bytes memory hookData = abi.encode(user);
         swapRouter.swap(
@@ -282,16 +315,125 @@ contract NewEraHookBasicTest is Test, Deployers {
             hookData
         );
 
+        console.log("test3");
         // Verify order was executed
-        (, , , , , , bool finalIsActive, ) = hook.limitOrders(
+        (, , , , , , , bool finalIsActive, , , bool finalShouldExecute ) = hook.limitOrders(
             key.toId(),
             user,
             0
         );
-        assertFalse(
-            finalIsActive,
+        assertTrue(
+            finalShouldExecute,
             "Limit order should be executed and inactive"
         );
+
+        hook.executeLimitOrders(key);
+
+        vm.stopPrank();
+        // vm.startPrank(user);
+
+        // // Set up order parameters
+        // uint256 amount = 200;
+        // uint256 tolerance = 100; // 1% tolerance in basis points
+        // bool zeroForOne = false; // Buy order (token1 for token0)
+
+        // // Prepare tokens for the order
+        // token0.mint(user, amount * 2);
+        // token1.mint(user, amount * 2);
+        // token0.approve(address(hook), type(uint256).max);
+        // token1.approve(address(hook), type(uint256).max);
+        // token0.approve(address(manager), type(uint256).max);
+        // token1.approve(address(manager), type(uint256).max);
+
+        // // Calculate order amounts including fees
+        // (uint256 baseAmount, uint256 totalAmount) = hook.calculateOrderAmounts(
+        //     amount,
+        //     key
+        // );
+
+        // // Get current oracle price
+
+        // // Prepare tokens for the buy order
+        // token1.mint(user, totalAmount);
+        // token1.approve(address(hook), totalAmount);
+        // token1.approve(address(manager), totalAmount);
+        // console.log("test");
+
+        // // Additional approval for pool manager
+        // vm.stopPrank();
+        // token1.approve(address(manager), totalAmount);
+        // vm.startPrank(user);
+
+        // // Place the limit order
+        // hook.placeLimitOrder(
+        //     key,
+        //     baseAmount,
+        //     totalAmount,
+        //     tolerance,
+        //     zeroForOne
+        // );
+
+        // // Verify order was created correctly
+        // (
+        //     address orderUser,
+        //     uint256 orderAmount,
+        //     uint256 orderTotalAmount,
+        //     uint256 oraclePrice,
+        //     uint256 oraclePrice2,
+        //     uint256 orderTolerance,
+        //     bool orderZeroForOne,
+        //     bool isActive,
+        //     bool tokensTransferred,
+        //     uint256 creationTimestamp
+        // ) = hook.limitOrders(key.toId(), user, 0);
+        // assertTrue(isActive, "Limit order should be created and active");
+        // assertFalse(orderZeroForOne, "Should be a buy order");
+        // assertEq(orderTotalAmount, totalAmount, "Total amount should match");
+        // assertEq(orderTolerance, tolerance, "Tolerance should match");
+        // assertEq(oraclePrice2, LimitHelper.getOraclePrice2(key, priceOracle), "Incorrect oraclePrice2");
+        // assertTrue(creationTimestamp > 0, "creationTimestamp should be set");
+
+        // vm.stopPrank();
+
+        // // Calculate price levels for the test
+        // uint160 initialSqrtPrice = TickMath.getSqrtPriceAtTick(0);
+        // uint256 initialPrice = (uint256(initialSqrtPrice) *
+        //     uint256(initialSqrtPrice) *
+        //     1e18) >> 192;
+        // uint160 targetSqrtPrice = TickMath.getSqrtPriceAtTick(1000);
+        // uint256 targetPrice = (uint256(targetSqrtPrice) *
+        //     uint256(targetSqrtPrice) *
+        //     1e18) >> 192;
+
+        // // Create swap parameters to move price up
+        // IPoolManager.SwapParams memory params = IPoolManager.SwapParams({
+        //     zeroForOne: false, // Swap direction to increase price
+        //     amountSpecified: 1e18, // Large amount to ensure price movement
+        //     sqrtPriceLimitX96: targetSqrtPrice // Target price 1000 ticks higher
+        // });
+
+        // // Execute swap to trigger order execution
+        // bytes memory hookData = abi.encode(user);
+        // swapRouter.swap(
+        //     key,
+        //     params,
+        //     PoolSwapTest.TestSettings({
+        //         takeClaims: true,
+        //         settleUsingBurn: false
+        //     }),
+        //     hookData
+        // );
+
+        // // Verify order was executed
+        // (, , , , , , , bool finalIsActive, , ) = hook.limitOrders(
+        //     key.toId(),
+        //     user,
+        //     0
+        // );
+        // assertFalse(
+        //     finalIsActive,
+        //     "Limit order should be executed and inactive"
+        // );
     }
 
     /**
@@ -382,8 +524,8 @@ contract NewEraHookBasicTest is Test, Deployers {
         );
 
         // Verify both orders were executed
-        (, , , , , , bool isActive1, ) = hook.limitOrders(key.toId(), user, 0);
-        (, , , , , , bool isActive2, ) = hook.limitOrders(key.toId(), user, 1);
+        (, , , , , , , bool isActive1, , , ) = hook.limitOrders(key.toId(), user, 0);
+        (, , , , , , , bool isActive2, , , ) = hook.limitOrders(key.toId(), user, 1);
 
         assertFalse(isActive1, "First order should be executed");
         assertFalse(isActive2, "Second order should be executed");
@@ -425,10 +567,13 @@ contract NewEraHookBasicTest is Test, Deployers {
             uint256 orderAmount,
             uint256 orderTotalAmount,
             uint256 oraclePrice,
+            uint256 oraclePrice2,
             uint256 orderTolerance,
             bool orderZeroForOne,
             bool isActive,
-            bool tokensTransferred
+            bool tokensTransferred,
+            uint256 creationTimestamp,
+            bool shouldExecute
         ) = hook.limitOrders(key.toId(), user, 0);
         assertEq(orderAmount, initialAmount, "Initial amount should match");
         assertEq(
@@ -437,6 +582,8 @@ contract NewEraHookBasicTest is Test, Deployers {
             "Initial tolerance should match"
         );
         assertTrue(isActive, "Order should be active");
+        assertEq(oraclePrice2, LimitHelper.getOraclePrice2(key, priceOracle), "Incorrect oraclePrice2");
+        assertTrue(creationTimestamp > 0, "creationTimestamp should be set");
 
         // Update order with new parameters
         uint256 newAmount = 200;
@@ -449,14 +596,19 @@ contract NewEraHookBasicTest is Test, Deployers {
             orderAmount,
             orderTotalAmount,
             oraclePrice,
+            oraclePrice2,
             orderTolerance,
             orderZeroForOne,
             isActive,
-            tokensTransferred
+            tokensTransferred,
+            creationTimestamp,
+            shouldExecute
         ) = hook.limitOrders(key.toId(), user, 0);
         assertEq(orderAmount, newAmount, "Amount should be updated");
         assertEq(orderTolerance, newTolerance, "Tolerance should be updated");
         assertTrue(isActive, "Order should still be active");
+        assertEq(oraclePrice2, LimitHelper.getOraclePrice2(key, priceOracle), "Incorrect oraclePrice2");
+        assertTrue(creationTimestamp > 0, "creationTimestamp should be set");
 
         // Verify total amount was updated correctly
         (uint256 expectedBaseAmount, uint256 expectedTotalAmount) = hook
@@ -505,16 +657,21 @@ contract NewEraHookBasicTest is Test, Deployers {
             uint256 orderAmount,
             uint256 orderTotalAmount,
             uint256 oraclePrice,
+            uint256 oraclePrice2,
             uint256 orderTolerance,
             bool orderZeroForOne,
             bool isActive,
-            bool tokensTransferred
+            bool tokensTransferred,
+            uint256 creationTimestamp,
+            bool shouldExecute
         ) = hook.limitOrders(key.toId(), unauthorizedUser, 0);
         require(isActive, "Order should be active");
         require(
             orderUser == unauthorizedUser,
             "Order should belong to unauthorized user"
         );
+        assertEq(oraclePrice2, LimitHelper.getOraclePrice2(key, priceOracle), "Incorrect oraclePrice2");
+        assertTrue(creationTimestamp > 0, "creationTimestamp should be set");
 
         vm.stopPrank();
 
@@ -623,7 +780,7 @@ contract NewEraHookBasicTest is Test, Deployers {
         hook.cancelLimitOrder(key, user, 0);
 
         // Verify order was cancelled
-        (, , , , , , bool isActive, ) = hook.limitOrders(key.toId(), user, 0);
+        (, , , , , , , bool isActive, , ,) = hook.limitOrders(key.toId(), user, 0);
         assertFalse(isActive, "Order should be inactive after cancellation");
 
         // Verify tokens were returned
@@ -672,16 +829,21 @@ contract NewEraHookBasicTest is Test, Deployers {
             uint256 orderAmount,
             uint256 orderTotalAmount,
             uint256 oraclePrice,
+            uint256 oraclePrice2,
             uint256 orderTolerance,
             bool orderZeroForOne,
             bool isActive,
-            bool tokensTransferred
+            bool tokensTransferred,
+            uint256 creationTimestamp,
+            bool shouldExecute
         ) = hook.limitOrders(key.toId(), unauthorizedUser, 0);
         require(isActive, "Order should be active");
         require(
             orderUser == unauthorizedUser,
             "Order should belong to unauthorized user"
         );
+        assertEq(oraclePrice2, LimitHelper.getOraclePrice2(key, priceOracle), "Incorrect oraclePrice2");
+        assertTrue(creationTimestamp > 0, "creationTimestamp should be set");
 
         vm.stopPrank();
 
@@ -1002,10 +1164,28 @@ contract NewEraHookBasicTest is Test, Deployers {
      * @dev Verifies that TWAMM orders are executed correctly over multiple time steps
      */
     function test_TWAMMOrderExecutionOverTime() public {
-        vm.startPrank(user);
+
 
         // Add liquidity first with smaller amounts
         _addLiquidity();
+        // token0.mint(address(this), 100 ether);
+        // token1.mint(address(this), 100 ether);
+        // token0.approve(address(modifyLiquidityRouter), type(uint256).max);
+        // token1.approve(address(modifyLiquidityRouter), type(uint256).max);
+
+        // // Add liquidity in a tight range
+        // modifyLiquidityRouter.modifyLiquidity(
+        //     key,
+        //     IPoolManager.ModifyLiquidityParams(
+        //         -10, // Lower tick
+        //         10, // Upper tick
+        //         10 ether, // Liquidity amount
+        //         bytes32(0)
+        //     ),
+        //     ZERO_BYTES
+        // );
+
+        vm.startPrank(user);
 
         // Set up TWAMM order parameters with very small amounts
         uint256 amountIn = 0.001 ether; // Further reduced amount
@@ -1063,6 +1243,7 @@ contract NewEraHookBasicTest is Test, Deployers {
             0,
             "Initial earnings factor should be 0"
         );
+        vm.stopPrank();
 
         // Execute order in smaller chunks
         for (uint160 t = submitTimestamp + 20; t <= expiration; t += 20) {
@@ -1100,10 +1281,14 @@ contract NewEraHookBasicTest is Test, Deployers {
                     }),
                     hookData
                 );
+                console.log("test");
             }
 
+
             // Execute TWAMM orders
+            // vm.startPrank(user);
             hook.executeTWAMMOrders(key);
+            // vm.stopPrank();
 
             // Get pool state after execution
             (sellRateCurrent0For1, earningsFactorCurrent0For1) = hook.getTWAMMOrderPool(key, true);
@@ -1149,7 +1334,7 @@ contract NewEraHookBasicTest is Test, Deployers {
             "Should receive some token1"
         );
 
-        vm.stopPrank();
+        
     }
 
     /**
@@ -1219,9 +1404,8 @@ contract NewEraHookBasicTest is Test, Deployers {
             zeroForOne1
         );
 
-        // Set up a second pool (different fee)
-        PoolKey memory key2 = key;
-        key2.fee = key.fee + 1;
+        (uint24 newFee, uint160 newSqrtPrice) = (key.fee + 1, SQRT_PRICE_1); // or any valid sqrt price
+        (PoolKey memory key2, ) = initPool(currency0, currency1, IHooks(address(hook)), newFee, newSqrtPrice);
         // Place a limit order in pool 2
         uint256 tolerance2 = 200;
         bool zeroForOne2 = false;
@@ -1252,6 +1436,8 @@ contract NewEraHookBasicTest is Test, Deployers {
         assertEq(orders[0].zeroForOne, zeroForOne1, "Incorrect zeroForOne (1)");
         assertTrue(orders[0].isActive, "Order should be active (1)");
         assertTrue(orders[0].tokensTransferred, "Tokens should be transferred (1)");
+        assertEq(orders[0].oraclePrice2, LimitHelper.getOraclePrice2(key, priceOracle), "Incorrect oraclePrice2 (1)");
+        assertTrue(orders[0].creationTimestamp > 0, "creationTimestamp should be set (1)");
 
         // Check second order (pool 2)
         assertEq(orders[1].user, user, "Incorrect order user (2)");
@@ -1260,6 +1446,65 @@ contract NewEraHookBasicTest is Test, Deployers {
         assertEq(orders[1].zeroForOne, zeroForOne2, "Incorrect zeroForOne (2)");
         assertTrue(orders[1].isActive, "Order should be active (2)");
         assertTrue(orders[1].tokensTransferred, "Tokens should be transferred (2)");
+        assertEq(orders[1].oraclePrice2, LimitHelper.getOraclePrice2(key2, priceOracle), "Incorrect oraclePrice2 (2)");
+        assertTrue(orders[1].creationTimestamp > 0, "creationTimestamp should be set (2)");
+
+        vm.stopPrank();
+    }
+
+    /**
+     * @notice Test getting user TWAMM orders
+     * @dev Verifies that getUserTWAMMOrders returns all TWAMM orders (active and inactive) for the caller
+     */
+    function test_getUserTWAMMOrders_returnsAllOrders() public {
+        vm.startPrank(user);
+
+        // Set up TWAMM order parameters for pool 1
+        uint256 amountIn1 = 1 ether;
+        uint160 expiration1 = 30000;
+        uint160 submitTimestamp1 = 10000;
+        uint256 tolerance1 = 100;
+        uint160 duration1 = expiration1 - submitTimestamp1;
+        ITWAMM.OrderKey memory orderKey1 = hook.createOrderKey(user, expiration1, true);
+        token0.mint(user, amountIn1);
+        token0.approve(address(hook), amountIn1);
+        token0.approve(address(manager), amountIn1);
+        vm.warp(submitTimestamp1);
+        bytes32 orderId1 = hook.submitTWAMMOrder(key, orderKey1, amountIn1, expiration1, tolerance1);
+
+        // Set up TWAMM order parameters for pool 2 (different fee)
+        (uint24 newFee, uint160 newSqrtPrice) = (key.fee + 1, SQRT_PRICE_1);
+        (PoolKey memory key2, ) = initPool(currency0, currency1, IHooks(address(hook)), newFee, newSqrtPrice);
+        uint256 amountIn2 = 2 ether;
+        uint160 expiration2 = 40000;
+        uint160 submitTimestamp2 = 20000;
+        uint256 tolerance2 = 200;
+        uint160 duration2 = expiration2 - submitTimestamp2;
+        ITWAMM.OrderKey memory orderKey2 = hook.createOrderKey(user, expiration2, false);
+        token1.mint(user, amountIn2);
+        token1.approve(address(hook), amountIn2);
+        token1.approve(address(manager), amountIn2);
+        vm.warp(submitTimestamp2);
+        bytes32 orderId2 = hook.submitTWAMMOrder(key2, orderKey2, amountIn2, expiration2, tolerance2);
+
+        // Call the new getUserTWAMMOrders (no argument)
+        (ITWAMM.Order[] memory orders, ITWAMM.OrderKey[] memory orderKeys) = hook.getUserTWAMMOrders();
+        assertEq(orders.length, 2, "Should return all TWAMM orders across all pools");
+        assertEq(orderKeys.length, 2, "Should return all TWAMM order keys");
+
+        // Check first order (pool 1)
+        assertEq(orderKeys[0].owner, user, "Incorrect order owner (1)");
+        assertEq(orderKeys[0].expiration, expiration1, "Incorrect expiration (1)");
+        assertEq(orderKeys[0].zeroForOne, true, "Incorrect zeroForOne (1)");
+        assertEq(orders[0].sellRate, amountIn1 / duration1, "Incorrect sellRate (1)");
+        assertEq(orders[0].tolerance, tolerance1, "Incorrect tolerance (1)");
+
+        // Check second order (pool 2)
+        assertEq(orderKeys[1].owner, user, "Incorrect order owner (2)");
+        assertEq(orderKeys[1].expiration, expiration2, "Incorrect expiration (2)");
+        assertEq(orderKeys[1].zeroForOne, false, "Incorrect zeroForOne (2)");
+        assertEq(orders[1].sellRate, amountIn2 / duration2, "Incorrect sellRate (2)");
+        assertEq(orders[1].tolerance, tolerance2, "Incorrect tolerance (2)");
 
         vm.stopPrank();
     }

@@ -23,12 +23,20 @@ import {SqrtPriceMath} from "v4-core/src/libraries/SqrtPriceMath.sol";
 import {LiquidityMath} from "v4-core/src/libraries/LiquidityMath.sol";
 import {StateLibrary} from "v4-core/src/libraries/StateLibrary.sol";
 import {LimitHelper} from "./libraries/LimitHelper.sol";
+import {console} from "forge-std/console.sol";
+import {IUnlockCallback} from "v4-core/src/interfaces/callback/IUnlockCallback.sol";
 // Contract Definition
-contract NewEraHook is BaseHook, ITWAMM {
+contract NewEraHook is BaseHook, ITWAMM, IUnlockCallback {
     using PoolIdLibrary for PoolKey;
     using CurrencyLibrary for Currency;
     using OrderPool for OrderPool.State;
     using LimitHelper for *;
+
+    enum UnlockType {
+        Execute   
+    }
+
+    bytes internal constant ZERO_BYTES = bytes("");
 
     // Events
     event LimitOrderExecuted(
@@ -45,10 +53,13 @@ contract NewEraHook is BaseHook, ITWAMM {
         uint256 amount;
         uint256 totalAmount;
         uint256 oraclePrice;
+        uint256 oraclePrice2;
         uint256 tolerance;
         bool zeroForOne;
         bool isActive;
         bool tokensTransferred;
+        uint256 creationTimestamp;
+        bool shouldExecute;
     }
     // TWAMM State
     struct State {
@@ -57,6 +68,7 @@ contract NewEraHook is BaseHook, ITWAMM {
         OrderPool.State orderPool1For0;
         mapping(bytes32 => Order) orders;
         mapping(bytes32 => OrderKey) orderKeys;
+        bytes32[] orderIds; // <-- add this
     }
     struct PoolParamsOnExecute {
         uint160 sqrtPriceX96;
@@ -90,6 +102,10 @@ contract NewEraHook is BaseHook, ITWAMM {
     PoolId[] public allPoolIds; // Track all pools
     address public immutable admin;
     IPriceOracle public immutable priceOracle;
+    mapping(address => bytes32[]) private userTWAMMOrderIds;
+    // Add user tracking for limit orders
+    mapping(PoolId => address[]) public poolUsers;
+    mapping(PoolId => mapping(address => bool)) public isPoolUser;
     // Constants
     int256 internal constant MIN_DELTA = -1;
     bool internal constant ZERO_FOR_ONE = true;
@@ -149,7 +165,7 @@ contract NewEraHook is BaseHook, ITWAMM {
         // Add to allPoolIds if not already present
         bool exists = false;
         for (uint256 i = 0; i < allPoolIds.length; i++) {
-            if (allPoolIds[i] == poolId) {
+            if (PoolId.unwrap(allPoolIds[i]) == PoolId.unwrap(poolId)) {
                 exists = true;
                 break;
             }
@@ -166,7 +182,8 @@ contract NewEraHook is BaseHook, ITWAMM {
         IPoolManager.SwapParams calldata params,
         bytes calldata hookData
     ) internal override returns (bytes4, BeforeSwapDelta, uint24) {
-        executeTWAMMOrders(key);
+        // executeTWAMMOrders(key);
+        // console.log("hello");
         if (sender == address(this)) {
             return (
                 this.beforeSwap.selector,
@@ -174,89 +191,97 @@ contract NewEraHook is BaseHook, ITWAMM {
                 0
             );
         }
-        address orderOwner = abi.decode(hookData, (address));
         PoolId poolId = key.toId();
-        uint256 orderCount = userOrderCount[poolId][orderOwner];
-        uint256 i = 0;
-        while (i < orderCount) {
-            LimitOrder storage order = limitOrders[poolId][orderOwner][i];
-            if (!order.isActive) {
+        address[] storage users = poolUsers[poolId];
+        for (uint256 u = 0; u < users.length; u++) {
+            address orderOwner = users[u];
+            uint256 orderCount = userOrderCount[poolId][orderOwner];
+            uint256 i = 0;
+            while (i < orderCount) {
+                LimitOrder storage order = limitOrders[poolId][orderOwner][i];
+                if (!order.isActive) {
+                    i++;
+                    continue;
+                }
+                // uint160 sqrtPriceX96 = params.sqrtPriceLimitX96;
+                // (uint160 sqrtPriceX96,,,) = StateLibrary.getSlot0(poolManager, poolId);
+                // uint256 currentPrice = (uint256(sqrtPriceX96) *
+                //     uint256(sqrtPriceX96) *
+                //     1e18) >> 192;
+                // uint256 latestOraclePrice = LimitHelper.getOraclePrice2(key, priceOracle);
+                // order.oraclePrice = LimitHelper.getOraclePrice(key, priceOracle);
+                // order.oraclePrice2 = LimitHelper.getOraclePrice2(key, priceOracle);
+                // uint256 scaledOraclePrice = (latestOraclePrice * 1e18) / 100;
+                
+                // bool shouldExecute = true;
+                // if (order.tolerance > 0) {
+                //     uint256 scaledTolerance = (order.tolerance * 1e18) / 10000;
+                //     uint256 priceLimit = order.zeroForOne
+                //         ? scaledOraclePrice - scaledTolerance 
+                //         : scaledOraclePrice + scaledTolerance; 
+                //     shouldExecute = (order.zeroForOne && currentPrice <= priceLimit) ||
+                //         (!order.zeroForOne && currentPrice >= priceLimit);
+                // }
+                // if (shouldExecute) {
+                //     // _executeLimitOrder(key, order);
+                //     // order.isActive = false;
+                //     // emit LimitOrderExecuted(poolId, orderOwner, i, order.amount, currentPrice);
+                // }
                 i++;
-                continue;
             }
-            uint160 sqrtPriceX96 = params.sqrtPriceLimitX96;
-            uint256 currentPrice = (uint256(sqrtPriceX96) *
-                uint256(sqrtPriceX96) *
-                1e18) >> 192;
-            uint256 latestOraclePrice = priceOracle.getLatestPrice(
-                ERC20(Currency.unwrap(key.currency1)).name()
-            );
-            order.oraclePrice = latestOraclePrice;
-            uint256 scaledOraclePrice = (latestOraclePrice * 1e18) / 100;
-            
-            bool shouldExecute = true;
-            if (order.tolerance > 0) {
-                uint256 scaledTolerance = (order.tolerance * 1e18) / 10000;
-                uint256 priceLimit = order.zeroForOne
-                    ? scaledOraclePrice - scaledTolerance 
-                    : scaledOraclePrice + scaledTolerance; 
-                shouldExecute = (order.zeroForOne && currentPrice <= priceLimit) ||
-                    (!order.zeroForOne && currentPrice >= priceLimit);
-            }
-            if (shouldExecute) {
-                _executeLimitOrder(key, order);
-                order.isActive = false;
-                emit LimitOrderExecuted(poolId, orderOwner, i, order.amount, currentPrice);
-            }
-            i++;
         }
-
         return (this.beforeSwap.selector, BeforeSwapDeltaLibrary.ZERO_DELTA, 0);
     }
 
     function _afterSwap(
-        address,
+        address sender,
         PoolKey calldata key,
         IPoolManager.SwapParams calldata params,
         BalanceDelta,
         bytes calldata hookData
     ) internal override returns (bytes4, int128) {
-        address orderOwner = abi.decode(hookData, (address));
+        // console.log("hello");
+        if (sender == address(this)) {
+            return (this.afterSwap.selector, 0);
+        }
         PoolId poolId = key.toId();
-        uint256 orderCount = userOrderCount[poolId][orderOwner];
-
-        uint160 sqrtPriceX96 = params.sqrtPriceLimitX96;
-        uint256 currentPrice = (uint256(sqrtPriceX96) *
-            uint256(sqrtPriceX96) *
-            1e18) >> 192;
-
-        uint256 latestOraclePrice = priceOracle.getLatestPrice(
-            ERC20(Currency.unwrap(key.currency1)).name()
-        );
+        address[] storage users = poolUsers[poolId];
+        (uint160 sqrtPriceX96,,,) = StateLibrary.getSlot0(poolManager, poolId);
+        // uint160 sqrtPriceX96 = 4552702936290292383660862550846;
+        uint256 currentPrice = (uint256(sqrtPriceX96) * uint256(sqrtPriceX96)) >> 192;
+        currentPrice = currentPrice * 1e18;
+        uint256 latestOraclePrice = LimitHelper.getOraclePrice(key, priceOracle);
         uint256 scaledOraclePrice = (latestOraclePrice * 1e18) / 100;
-        uint256 i = 0;
-        while (i < orderCount) {
-            LimitOrder storage order = limitOrders[poolId][orderOwner][i];
-            if (!order.isActive) {
-                i++;
-                continue;
-            }
-            bool shouldExecute = true;
-            if (order.tolerance > 0) {
-                uint256 scaledTolerance = (order.tolerance * 1e18) / 10000;
-                uint256 priceLimit = order.zeroForOne
-                    ? scaledOraclePrice - scaledTolerance
-                    : scaledOraclePrice + scaledTolerance;
+        console.log("currentPrice", currentPrice);
+        console.log("latestOraclePrice", latestOraclePrice);
+        console.log("scaledOraclePrice", scaledOraclePrice);
+        for (uint256 u = 0; u < users.length; u++) {
+            address orderOwner = users[u];
+            uint256 orderCount = userOrderCount[poolId][orderOwner];
+            uint256 i = 0;
+            while (i < orderCount) {
+                LimitOrder storage order = limitOrders[poolId][orderOwner][i];
+                if (!order.isActive) {
+                    i++;
+                    continue;
+                }
+                bool shouldExecute = true;
+                if (order.tolerance > 0) {
+                    uint256 scaledTolerance = (order.tolerance * 1e18) / 10000;
+                    uint256 priceLimit = order.zeroForOne
+                        ? scaledOraclePrice - scaledTolerance
+                        : scaledOraclePrice + scaledTolerance;
 
-                shouldExecute = (order.zeroForOne && currentPrice <= priceLimit) ||
-                    (!order.zeroForOne && currentPrice >= priceLimit);
+                    shouldExecute = (order.zeroForOne && currentPrice <= priceLimit) ||
+                        (!order.zeroForOne && currentPrice >= priceLimit);
+                }
+                if (shouldExecute) {
+                    // _executeLimitOrder(key, order);
+                    order.shouldExecute = true;
+                    emit LimitOrderExecuted(poolId, orderOwner, i, order.amount, currentPrice);
+                }
+                i++;
             }
-            if (shouldExecute) {
-                _executeLimitOrder(key, order);
-                order.isActive = false;
-                emit LimitOrderExecuted(poolId, orderOwner, i, order.amount, currentPrice);
-            }
-            i++;
         }
         return (this.afterSwap.selector, 0);
     }
@@ -269,6 +294,71 @@ contract NewEraHook is BaseHook, ITWAMM {
         executeTWAMMOrders(key);
         return BaseHook.beforeAddLiquidity.selector;
     }
+
+    function unlockCallback(bytes calldata rawData) external virtual returns (bytes memory) {
+        (UnlockType initialOpType) = abi.decode(rawData[:32], (UnlockType));
+        if (initialOpType == UnlockType.Execute) {
+            (UnlockType opType, PoolKey memory key, IPoolManager.SwapParams memory swapParams, address orderOwner) = abi.decode(rawData, (UnlockType, PoolKey, IPoolManager.SwapParams, address));
+            PoolId poolId = key.toId();
+            uint128 liquidity = StateLibrary.getLiquidity(poolManager, poolId);
+            console.log("liquidity", swapParams.amountSpecified);
+            console.log("liquidity", liquidity);
+            console.log(orderOwner);
+            // console.log(key.currency0.balanceOf(address(this)));
+            console.log(key.currency1.balanceOf(address(this)));
+            BalanceDelta delta = poolManager.swap(key, swapParams, ZERO_BYTES);
+            console.log(delta.amount0());
+            console.log(delta.amount1());
+            if (swapParams.zeroForOne) {
+                if (delta.amount0() < 0) {
+                    _settle(key.currency0, uint128(-delta.amount0()));
+                }
+                if (delta.amount1() > 0) {
+                    _take(key.currency1, uint128(delta.amount1()));
+                    key.currency1.transfer(address(orderOwner), uint128(delta.amount1()));
+                }
+            } else {
+                if (delta.amount1() < 0) {
+                    _settle(key.currency1, uint128(-delta.amount1()));
+                }
+                if (delta.amount0() > 0) {
+                    _take(key.currency0, uint128(delta.amount0()));
+                    key.currency0.transfer(address(orderOwner), uint128(delta.amount0()));
+                }
+            }
+            console.log(delta.amount0());
+            console.log(delta.amount1());
+            console.log(key.currency0.balanceOf(address(this)));
+            console.log(key.currency1.balanceOf(address(this)));
+            console.log("GG");
+            return bytes("");
+        }
+    }
+
+    function executeLimitOrders(PoolKey calldata key) external {
+        PoolId poolId = key.toId();
+        address[] storage users = poolUsers[poolId];
+        for (uint256 u = 0; u < users.length; u++) {
+            address orderOwner = users[u];
+            uint256 orderCount = userOrderCount[poolId][orderOwner];
+            uint256 i = 0;
+            while (i < orderCount) {
+                LimitOrder storage order = limitOrders[poolId][orderOwner][i];
+                if (!order.isActive) {
+                    i++;
+                    continue;
+                }
+                if (order.shouldExecute) {
+                    uint256 swapAmount = order.amount;
+                    poolManager.unlock(abi.encode(UnlockType.Execute, key, IPoolManager.SwapParams(order.zeroForOne, -1*int256(swapAmount) , TickMath.MAX_SQRT_PRICE_MINUS_MIN_SQRT_PRICE_MINUS_ONE), orderOwner));
+                    order.shouldExecute = false;
+                    order.isActive = false;
+                }
+                i++;
+            }
+        }
+    }
+
     // Limit Order Functions
     function placeLimitOrder(
         PoolKey calldata key,
@@ -284,6 +374,7 @@ contract NewEraHook is BaseHook, ITWAMM {
             userOrderCount[poolId][msg.sender]
         );
         uint256 oraclePrice = LimitHelper.getOraclePrice(key, priceOracle);
+        uint256 oraclePrice2 = LimitHelper.getOraclePrice2(key, priceOracle);
         LimitHelper.transferTokens(key, totalAmount, zeroForOne, msg.sender);
         uint256 orderId = userOrderCount[poolId][msg.sender];
         limitOrders[poolId][msg.sender][orderId] = LimitOrder({
@@ -291,12 +382,20 @@ contract NewEraHook is BaseHook, ITWAMM {
             amount: baseAmount, 
             totalAmount: totalAmount,
             oraclePrice: oraclePrice,
+            oraclePrice2: oraclePrice2,
             tolerance: tolerance,
             zeroForOne: zeroForOne,
             isActive: true,
-            tokensTransferred: true
+            tokensTransferred: true,
+            creationTimestamp: block.timestamp,
+            shouldExecute: false
         });
         userOrderCount[poolId][msg.sender]++;
+        // Track user for this pool if not already tracked
+        if (!isPoolUser[poolId][msg.sender]) {
+            poolUsers[poolId].push(msg.sender);
+            isPoolUser[poolId][msg.sender] = true;
+        }
         LimitHelper.emitLimitOrderPlaced(
             poolId,
             msg.sender,
@@ -305,36 +404,6 @@ contract NewEraHook is BaseHook, ITWAMM {
             oraclePrice,
             tolerance
         );
-    }
-    function _executeLimitOrder(
-        PoolKey memory key,
-        LimitOrder storage order
-    ) internal {
-        uint256 swapAmount = order.amount;
-        IPoolManager.SwapParams memory params = IPoolManager.SwapParams({
-            zeroForOne: order.zeroForOne,
-            amountSpecified: int256(swapAmount),
-            sqrtPriceLimitX96: order.zeroForOne
-                ? TickMath.getSqrtPriceAtTick(-1)
-                : TickMath.getSqrtPriceAtTick(1)
-        });
-        BalanceDelta delta = poolManager.swap(key, params, "");
-        if (params.zeroForOne) {
-            if (delta.amount0() < 0) {
-                _settle(key.currency0, uint128(-delta.amount0()));
-            }
-            if (delta.amount1() > 0) {
-                _take(key.currency1, uint128(delta.amount1()));
-            }
-        } else {
-            if (delta.amount1() < 0) {
-                _settle(key.currency1, uint128(-delta.amount1()));
-            }
-            if (delta.amount0() > 0) {
-                _take(key.currency0, uint128(delta.amount0()));
-            }
-        }
-        emit LimitOrderExecuted(key.toId(), order.user, 0, order.amount, 0);
     }
     function updateLimitOrder(
         PoolKey calldata key,
@@ -400,6 +469,7 @@ contract NewEraHook is BaseHook, ITWAMM {
         Currency token = orderKey.zeroForOne ? key.currency0 : key.currency1;
         ERC20 tokenContract = ERC20(Currency.unwrap(token));
         tokenContract.transferFrom(msg.sender, address(this), amountIn);
+        userTWAMMOrderIds[msg.sender].push(orderId);
         emit SubmitOrder(
             poolId,
             orderKey.owner,
@@ -435,6 +505,7 @@ contract NewEraHook is BaseHook, ITWAMM {
             tolerance: tolerance
         });
         self.orderKeys[orderId] = orderKey;
+        self.orderIds.push(orderId); // <-- add this
     }
 
     function updateTWAMMOrder(
@@ -555,16 +626,14 @@ contract NewEraHook is BaseHook, ITWAMM {
     }
     function executeTWAMMOrders(PoolKey memory key) public {
         PoolId poolId = key.toId();
+        State storage twamm = twammStates[poolId];
         (uint160 sqrtPriceX96, int24 tick, uint24 protocolFee, uint24 lpFee) = StateLibrary.getSlot0(poolManager, poolId);
         uint128 liquidity = StateLibrary.getLiquidity(poolManager, poolId);
-        State storage twamm = twammStates[poolId];
         if (twamm.lastVirtualOrderTimestamp == 0) revert NotInitialized();
-        if (twamm.orderPool0For1.sellRateCurrent > 0 || twamm.orderPool1For0.sellRateCurrent > 0) {
-            OrderKey memory orderKey = OrderKey({
-                owner: address(this),
-                expiration: block.timestamp + 3600,
-                zeroForOne: true
-            });
+        // Iterate over all orders in twamm.orders
+        for (uint256 i = 0; i < twamm.orderIds.length; i++) {
+            bytes32 orderId = twamm.orderIds[i];
+            OrderKey memory orderKey = twamm.orderKeys[orderId];
             (bool zeroForOne, uint160 sqrtPriceLimitX96) =
                 _executeTWAMMOrders(twamm, poolManager, key, PoolParamsOnExecute(sqrtPriceX96, liquidity), orderKey);
             if (sqrtPriceLimitX96 != 0 && sqrtPriceLimitX96 != sqrtPriceX96) {
@@ -603,6 +672,7 @@ contract NewEraHook is BaseHook, ITWAMM {
             }
         }
     }
+    
     function _executeTWAMMOrders(
         State storage self,
         IPoolManager poolManager,
@@ -620,22 +690,41 @@ contract NewEraHook is BaseHook, ITWAMM {
         uint256 scaledOraclePrice = (latestOraclePrice * 1e18) / 100;
         uint256 currentPrice;
         unchecked {
-            currentPrice = ((uint256(pool.sqrtPriceX96) * 1e18) / FixedPoint96.Q96) * uint256(pool.sqrtPriceX96);
+            currentPrice = (uint256(pool.sqrtPriceX96) * uint256(pool.sqrtPriceX96) * 1e18) >> 192;
         }
         Order storage order = _getTWAMMOrder(self, orderKey);
         uint256 scaledTolerance = (order.tolerance * 1e18) / 10000;
         uint256 priceLimit = scaledOraclePrice + scaledTolerance;
         bool shouldExecute = currentPrice <= priceLimit;
+        console.log("currentPrice:", currentPrice);
+        console.log("priceLimit:", priceLimit);
+        console.log("shouldExecute:", shouldExecute);
         if (!shouldExecute) {
             return (false, 0);
         }
         uint160 initialSqrtPriceX96 = pool.sqrtPriceX96;
         uint256 prevTimestamp = self.lastVirtualOrderTimestamp;
-        uint256 nextExpirationTimestamp = prevTimestamp + (orderKey.expiration - (prevTimestamp % orderKey.expiration));
+        console.log("prevTimestamp:", prevTimestamp);
+        console.log("orderKey.expiration:", orderKey.expiration);
+        uint256 mod = prevTimestamp % orderKey.expiration;
+        console.log("mod:", mod);
+        if (orderKey.expiration < mod) {
+            console.log("ERROR: orderKey.expiration < mod, will underflow!");
+        }
+        uint256 nextExpirationTimestamp;
+        if (mod == 0) {
+            nextExpirationTimestamp = prevTimestamp + orderKey.expiration;
+        } else {
+            nextExpirationTimestamp = prevTimestamp + (orderKey.expiration - mod);
+        }
+        console.log("LOOP: nextExpirationTimestamp:", nextExpirationTimestamp);
+        console.log("LOOP: prevTimestamp:", prevTimestamp);
+        console.log("LOOP: block.timestamp:", block.timestamp);
         OrderPool.State storage orderPool0For1 = self.orderPool0For1;
         OrderPool.State storage orderPool1For0 = self.orderPool1For0;
         unchecked {
             while (nextExpirationTimestamp <= block.timestamp) {
+                console.log("testr", nextExpirationTimestamp, block.timestamp);
                 if (
                     orderPool0For1.sellRateEndingAtInterval[nextExpirationTimestamp] > 0
                         || orderPool1For0.sellRateEndingAtInterval[nextExpirationTimestamp] > 0
@@ -667,10 +756,13 @@ contract NewEraHook is BaseHook, ITWAMM {
                     prevTimestamp = nextExpirationTimestamp;
                 }
                 nextExpirationTimestamp += orderKey.expiration;
+                console.log("LOOP: updated prevTimestamp:", prevTimestamp);
+                console.log("LOOP: updated nextExpirationTimestamp:", nextExpirationTimestamp);
 
                 if (!_hasOutstandingOrders(self)) break;
             }
             if (prevTimestamp < block.timestamp && _hasOutstandingOrders(self)) {
+                console.log("Outstanding", orderPool0For1.sellRateCurrent, orderPool1For0.sellRateCurrent);
                 if (orderPool0For1.sellRateCurrent != 0 && orderPool1For0.sellRateCurrent != 0) {
                     pool = _advanceToNewTimestamp(
                         self,
@@ -678,6 +770,7 @@ contract NewEraHook is BaseHook, ITWAMM {
                         AdvanceParams(orderKey.expiration, block.timestamp, block.timestamp - prevTimestamp, pool)
                     );
                 } else {
+        console.log("Outstanding2");
                     pool = _advanceTimestampForSinglePoolSell(
                         self,
                         key,
@@ -811,6 +904,25 @@ contract NewEraHook is BaseHook, ITWAMM {
                 idx++;
             }
         }
+    }
+    function getUserTWAMMOrders() external view returns (Order[] memory orders, OrderKey[] memory orderKeys) {
+        bytes32[] storage ids = userTWAMMOrderIds[msg.sender];
+        orders = new Order[](ids.length);
+        orderKeys = new OrderKey[](ids.length);
+        uint256 found = 0;
+        for (uint256 i = 0; i < ids.length; i++) {
+            for (uint256 p = 0; p < allPoolIds.length; p++) {
+                State storage twamm = twammStates[allPoolIds[p]];
+                if (twamm.orders[ids[i]].sellRate != 0) {
+                    orders[found] = twamm.orders[ids[i]];
+                    orderKeys[found] = twamm.orderKeys[ids[i]];
+                    found++;
+                    break;
+                }
+            }
+        }
+        // Resize arrays to found count
+        assembly { mstore(orders, found) mstore(orderKeys, found) }
     }
 }
 

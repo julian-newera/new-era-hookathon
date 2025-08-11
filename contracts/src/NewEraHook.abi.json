@@ -441,6 +441,25 @@
   },
   {
     "type": "function",
+    "name": "allPoolIds",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "PoolId"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "beforeAddLiquidity",
     "inputs": [
       {
@@ -998,6 +1017,46 @@
   },
   {
     "type": "function",
+    "name": "executeLimitOrders",
+    "inputs": [
+      {
+        "name": "key",
+        "type": "tuple",
+        "internalType": "struct PoolKey",
+        "components": [
+          {
+            "name": "currency0",
+            "type": "address",
+            "internalType": "Currency"
+          },
+          {
+            "name": "currency1",
+            "type": "address",
+            "internalType": "Currency"
+          },
+          {
+            "name": "fee",
+            "type": "uint24",
+            "internalType": "uint24"
+          },
+          {
+            "name": "tickSpacing",
+            "type": "int24",
+            "internalType": "int24"
+          },
+          {
+            "name": "hooks",
+            "type": "address",
+            "internalType": "contract IHooks"
+          }
+        ]
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "executeTWAMMOrders",
     "inputs": [
       {
@@ -1265,40 +1324,7 @@
   {
     "type": "function",
     "name": "getUserLimitOrders",
-    "inputs": [
-      {
-        "name": "key",
-        "type": "tuple",
-        "internalType": "struct PoolKey",
-        "components": [
-          {
-            "name": "currency0",
-            "type": "address",
-            "internalType": "Currency"
-          },
-          {
-            "name": "currency1",
-            "type": "address",
-            "internalType": "Currency"
-          },
-          {
-            "name": "fee",
-            "type": "uint24",
-            "internalType": "uint24"
-          },
-          {
-            "name": "tickSpacing",
-            "type": "int24",
-            "internalType": "int24"
-          },
-          {
-            "name": "hooks",
-            "type": "address",
-            "internalType": "contract IHooks"
-          }
-        ]
-      }
-    ],
+    "inputs": [],
     "outputs": [
       {
         "name": "orders",
@@ -1326,6 +1352,11 @@
             "internalType": "uint256"
           },
           {
+            "name": "oraclePrice2",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
             "name": "tolerance",
             "type": "uint256",
             "internalType": "uint256"
@@ -1344,8 +1375,94 @@
             "name": "tokensTransferred",
             "type": "bool",
             "internalType": "bool"
+          },
+          {
+            "name": "creationTimestamp",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "shouldExecute",
+            "type": "bool",
+            "internalType": "bool"
           }
         ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getUserTWAMMOrders",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "orders",
+        "type": "tuple[]",
+        "internalType": "struct ITWAMM.Order[]",
+        "components": [
+          {
+            "name": "sellRate",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "earningsFactorLast",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "tolerance",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
+      },
+      {
+        "name": "orderKeys",
+        "type": "tuple[]",
+        "internalType": "struct ITWAMM.OrderKey[]",
+        "components": [
+          {
+            "name": "owner",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "expiration",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "zeroForOne",
+            "type": "bool",
+            "internalType": "bool"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "isPoolUser",
+    "inputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "PoolId"
+      },
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
       }
     ],
     "stateMutability": "view"
@@ -1392,6 +1509,11 @@
         "internalType": "uint256"
       },
       {
+        "name": "oraclePrice2",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
         "name": "tolerance",
         "type": "uint256",
         "internalType": "uint256"
@@ -1408,6 +1530,16 @@
       },
       {
         "name": "tokensTransferred",
+        "type": "bool",
+        "internalType": "bool"
+      },
+      {
+        "name": "creationTimestamp",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "shouldExecute",
         "type": "bool",
         "internalType": "bool"
       }
@@ -1502,6 +1634,30 @@
         "name": "",
         "type": "address",
         "internalType": "contract IPoolManager"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "poolUsers",
+    "inputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "PoolId"
+      },
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "stateMutability": "view"
@@ -1625,6 +1781,25 @@
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "unlockCallback",
+    "inputs": [
+      {
+        "name": "rawData",
+        "type": "bytes",
+        "internalType": "bytes"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes",
+        "internalType": "bytes"
+      }
+    ],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
