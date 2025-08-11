@@ -32,7 +32,8 @@ contract CreatePoolAndAddLiquidityScript is BaseScript, LiquidityHelpers {
 
     uint24 lpFee = 0; // 0.50%
     int24 tickSpacing = 100;
-    uint160 startingPrice = 2 ** 96; // Starting price, sqrtPriceX96; floor(sqrt(1) * 2^96)
+    // uint160 startingPrice = 2 ** 96; // Starting price, sqrtPriceX96; floor(sqrt(1) * 2^96)
+    uint160 startingPrice = 4552702936290292383660862550846;
 
     // --- liquidity position configuration --- //
     uint256 public token0Amount = 1000e18;
